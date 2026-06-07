@@ -27,7 +27,7 @@ struct Settings {
     String   clawdMode     = "auto";    // "auto" (mood from Claude usage) or "manual"
     String   clawdExpr     = "normal";  // manual expression: normal/squish/code/logo
     uint8_t  clawdSpeed    = 2;         // 1 slow · 2 normal · 3 fast
-    String   clawdEyeColor = "sky";     // palette name (coral/amber/mint/sky/lilac)
+    String   clawdEyeColor = "orange";  // palette name (orange/coral/amber/mint/sky/lilac)
     String   clawdBgColor  = "black";   // palette name; "black" → 0x0000
     // Display polarity for this panel — ST7789 (SmallTV-Ultra) needs true,
     // ILI9341 (CYD/ESP32) needs false. Web UI exposes a runtime toggle.

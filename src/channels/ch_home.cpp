@@ -80,12 +80,17 @@ static void paintColon() {
 static void paintMM(int mm) {
     clockGeom();
     char b[4]; snprintf(b, sizeof(b), "%02d", mm);
-    // Clear with margin on both sides + vertical slack so glyph edges leave no
-    // stale pixels when a digit changes. The left margin stays right of the
-    // colon (s_mmX is colon-width past s_colonX), so the colon is untouched.
-    tft.fillRect(s_mmX - 4, 4, s_digitW * 2 + 8, 88, Theme::BG);
+    // Repaint the colon + both minute digits as ONE block: clear generously from
+    // the colon to well past the minutes, then redraw both. This guarantees no
+    // stale glyph-edge pixels survive a minute change. Hours (left of the colon)
+    // are untouched.
+    int x0 = s_colonX;
+    int w  = (s_mmX + s_digitW * 2 + 12) - x0;
+    tft.fillRect(x0, 2, w, 90, Theme::BG);
     Display::useFont("VT323-86");
     tft.setTextDatum(TL_DATUM);
+    tft.setTextColor(Theme::CORAL, Theme::BG);
+    tft.drawString(":", s_colonX, 6);
     tft.setTextColor(Theme::AMBER, Theme::BG);
     tft.drawString(b, s_mmX, 6);
 }

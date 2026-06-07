@@ -34,7 +34,7 @@ Settings Storage::load() {
     s.clawdMode     = doc["clawd_mode"]     | "auto";
     s.clawdExpr     = doc["clawd_expr"]     | "normal";
     s.clawdSpeed    = doc["clawd_speed"]    | 2;
-    s.clawdEyeColor = doc["clawd_eye"]      | "sky";
+    s.clawdEyeColor = doc["clawd_eye"]      | "orange";
     s.clawdBgColor  = doc["clawd_bg"]       | "black";
     s.invertDisplay = doc["invert_display"] | true;
     s.highlightColor = doc["highlight_color"] | "auto";
