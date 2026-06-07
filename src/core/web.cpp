@@ -50,12 +50,15 @@ extern const ClaudeData* mainClaudeData();
 
 static uint16_t parseColor(const String& s) {
     String c = s; c.toLowerCase();
-    if (c == "red"    || c == "coral" || c == "alert")  return 0xFA89;
-    if (c == "amber"  || c == "warn")                   return 0xFE88;
-    if (c == "green"  || c == "mint" || c == "ok")      return 0x8F2E;
-    if (c == "blue"   || c == "sky"  || c == "info")    return 0x55BF;
-    if (c == "lilac"  || c == "codex")                  return 0xC43F;
-    return 0xFA89;
+    // a few friendly aliases, then the shared resolver (palette names incl.
+    // "orange", or a "#RRGGBB" hex). Falls back to coral.
+    if (c == "red"  || c == "alert") c = "coral";
+    if (c == "warn")                 c = "amber";
+    if (c == "green" || c == "ok")   c = "mint";
+    if (c == "blue"  || c == "info") c = "sky";
+    if (c == "codex")                c = "lilac";
+    uint16_t col = Theme::resolveColor(c.c_str());
+    return col ? col : 0xFA89;
 }
 
 static bool checkAuth() {

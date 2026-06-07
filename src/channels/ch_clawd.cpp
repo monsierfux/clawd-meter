@@ -24,8 +24,8 @@
 
 // ── Geometry (320x240 landscape) ──
 // Square eyes (mochi style), wide gap between them.
-static const int EYE_CX_L = 92;
-static const int EYE_CX_R = 228;
+static const int EYE_CX_L = 80;
+static const int EYE_CX_R = 240;
 static const int EYE_CY   = 104;    // sit a little above center (mochi look)
 static const int EYE_W    = 78;
 static const int EYE_H    = 84;
@@ -290,7 +290,7 @@ void chClawdTick(const ChannelCtx& ctx) {
 
     // Normal / stressed: double-blink (closed→open→closed→open) + slow wiggle.
     uint32_t wiggleEvery = 2400 / speed;
-    uint32_t blinkEvery  = 10000 / speed;    // less frequent, calmer
+    uint32_t blinkEvery  = 15000 / speed;    // much less frequent, calmer
     if (s_blinkPhase == 0) {
         if (now - s_lastBlink >= blinkEvery) {
             s_blinkPhase = 1; s_blinkT = now; paintEyes(expr, s_lookX, true,  eyeCol, bg);

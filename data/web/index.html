@@ -78,7 +78,7 @@
       <input x-model="pushForm.subtitle" placeholder="main / 4 min ago">
       <label>Color</label>
       <div class="color-pick">
-        <template x-for="c in [{v:'coral',l:'coral'},{v:'amber',l:'amber'},{v:'mint',l:'mint'},{v:'sky',l:'sky'},{v:'lilac',l:'lilac'}]">
+        <template x-for="c in [{v:'orange',l:'orange'},{v:'coral',l:'coral'},{v:'amber',l:'amber'},{v:'mint',l:'mint'},{v:'sky',l:'sky'},{v:'lilac',l:'lilac'}]">
           <button type="button" class="swatch"
             x-bind:class="{active: pushForm.color === c.v}"
             x-bind:style="'--sw: var(--' + c.v + ')'"
@@ -86,6 +86,7 @@
             x-text="c.l"></button>
         </template>
       </div>
+      <input type="text" x-model="pushForm.color" placeholder="or custom hex e.g. #d97757" maxlength="9">
       <label>Duration (seconds)</label>
       <input type="number" x-model.number="pushForm.duration_s" min="5" max="300">
       <button x-on:click="sendPush()" class="primary">Send</button>
@@ -404,10 +405,11 @@ function app() {
       const self = this;
       const PAL = {orange:'#d97757',coral:'#ff5247',amber:'#ffd23f',mint:'#8fe574',sky:'#54b6ff',lilac:'#c385ff',black:'#000000'};
       const css = (v, fb) => !v ? fb : (v[0] === '#' ? v : (PAL[v] || fb));
-      const cxL = 92*S, cxR = 228*S, cy = 104*S, ew = 78*S, eh = 84*S, v = (84/3)*S, look = 14*S;
+      const cxL = 80*S, cxR = 240*S, cy = 104*S, ew = 78*S, eh = 84*S, v = (84/3)*S, look = 14*S;
       const seg = (x0,y0,x1,y1,w) => { ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke(); };
-      const happy = (cx) => { const h=ew/2; seg(cx-h,cy+v,cx,cy-v,14*S); seg(cx,cy-v,cx+h,cy+v,14*S); };
-      const squish = (cx,r) => { const h=ew/2; if(r){seg(cx-h,cy-v,cx+h,cy,14*S);seg(cx+h,cy,cx-h,cy+v,14*S);} else {seg(cx+h,cy-v,cx-h,cy,14*S);seg(cx-h,cy,cx+h,cy+v,14*S);} };
+      const dot = (x,y) => { ctx.beginPath(); ctx.arc(x,y,7*S,0,7); ctx.fill(); };
+      const happy = (cx) => { const h=ew/2; seg(cx-h,cy+v,cx,cy-v,14*S); seg(cx,cy-v,cx+h,cy+v,14*S); dot(cx,cy-v); };
+      const squish = (cx,r) => { const h=ew/2; if(r){seg(cx-h,cy-v,cx+h,cy,14*S);seg(cx+h,cy,cx-h,cy+v,14*S);dot(cx+h,cy);} else {seg(cx+h,cy-v,cx-h,cy,14*S);seg(cx-h,cy,cx+h,cy+v,14*S);dot(cx-h,cy);} };
       const brow = (cx,l) => { const h=ew/2, yH=cy-eh/2-26*S, yL=cy-eh/2-12*S; l?seg(cx-h,yL,cx+h,yH,9*S):seg(cx-h,yH,cx+h,yL,9*S); };
       const open = (cx,ox) => ctx.fillRect(cx-ew/2+ox, cy-eh/2, ew, eh);
       const shut = (cx) => ctx.fillRect(cx-ew/2, cy-6*S, ew, 12*S);
@@ -419,7 +421,7 @@ function app() {
         if (self.settings.clawdMode !== 'manual') expr = ['happy','squish','normal','stressed'][Math.floor(t/1800)%4];
         ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
         ctx.fillStyle = eye; ctx.strokeStyle = eye; ctx.lineCap='butt'; ctx.lineJoin='miter';
-        const c = t % 3000, blink = (c>2600&&c<2700)||(c>2770&&c<2840);
+        const c = t % 7000, blink = (c>6400&&c<6600)||(c>6700&&c<6900);
         const wig = Math.floor(t/1000)%3, ox = wig===1?look:(wig===2?-look:0);
         if (expr==='happy') { happy(cxL); happy(cxR); }
         else if (expr==='squish') { if((t%1100)>900){shut(cxL);shut(cxR);} else {squish(cxL,true);squish(cxR,false);} }
