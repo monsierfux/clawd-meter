@@ -44,7 +44,7 @@ static bool     s_squishClosed = false;
 static uint32_t s_squishT    = 0;
 static uint16_t s_eyeCol     = 0;
 static uint16_t s_bgCol      = 0xFFFF;
-static char     s_footer[20] = "";
+static char     s_footer[40] = "";
 
 bool chClawdEnabled(const ChannelCtx& ctx) {
     return ctx.settings && ctx.settings->showClawd;
@@ -206,10 +206,13 @@ static void paintEyes(int expr, int lookX, bool blink, uint16_t eyeCol, uint16_t
 }
 
 static void buildFooter(const ChannelCtx& ctx, char* out, size_t n) {
-    float p = ctx.claude ? ctx.claude->sessionPct : -1.f;
-    if (p < 0) { snprintf(out, n, "5H  --"); return; }
+    float s = ctx.claude ? ctx.claude->sessionPct : -1.f;
+    float w = ctx.claude ? ctx.claude->weeklyPct  : -1.f;
     const char* tag = ctx.settings->usageShowConsumed ? "USED" : "LEFT";
-    snprintf(out, n, "5H  %.0f%% %s", p, tag);
+    char a[18], b[18];
+    if (s < 0) snprintf(a, sizeof(a), "5H --"); else snprintf(a, sizeof(a), "5H %.0f%% %s", s, tag);
+    if (w < 0) snprintf(b, sizeof(b), "7D --"); else snprintf(b, sizeof(b), "7D %.0f%% %s", w, tag);
+    snprintf(out, n, "%s \xC2\xB7 %s", a, b);   // "5H 42% LEFT · 7D 88% LEFT"
 }
 
 static void paintFooter(const ChannelCtx& ctx, uint16_t bg) {
@@ -228,12 +231,6 @@ void chClawdDraw(const ChannelCtx& ctx) {
     float used; Expr expr = resolveExpr(ctx, used);
 
     tft.fillScreen(bg);
-
-    // tiny wordmark, top-left
-    Display::useFont("Silkscreen-12");
-    tft.setTextDatum(TL_DATUM);
-    tft.setTextColor(eyeCol, bg);
-    tft.drawString("clawd", 8, 8);
 
     if (expr == EX_CODE) {
         // "Claude Code" splash with accent bar
@@ -273,7 +270,7 @@ void chClawdTick(const ChannelCtx& ctx) {
     }
 
     // Footer follows the live usage value.
-    char fresh[20]; buildFooter(ctx, fresh, sizeof(fresh));
+    char fresh[40]; buildFooter(ctx, fresh, sizeof(fresh));
     if (strcmp(fresh, s_footer) != 0) paintFooter(ctx, bg);
 
     if (!isAnimated(expr)) return;

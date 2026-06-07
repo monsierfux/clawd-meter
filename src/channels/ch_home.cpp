@@ -163,8 +163,8 @@ struct MeterRow { const char* tag; uint16_t color; float pct; };
 static void computeMeters(const ChannelCtx& ctx, MeterRow& r1, MeterRow& r2) {
     const float session = ctx.claude ? ctx.claude->sessionPct : -1.f;
     const float weekly  = ctx.claude ? ctx.claude->weeklyPct  : -1.f;
-    r1 = { "7D", Theme::CORAL, weekly };
-    r2 = { "5H", Theme::CORAL, session };
+    r1 = { "5H", Theme::CORAL, session };
+    r2 = { "7D", Theme::CORAL, weekly };
 }
 
 static void paintMeterRow(int y, const MeterRow& r) {
