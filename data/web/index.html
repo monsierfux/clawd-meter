@@ -220,6 +220,7 @@
         <option value="sky">Sky</option>
         <option value="lilac">Lilac</option>
       </select>
+      <input type="text" x-model="settings.clawdEyeColor" placeholder="or custom hex e.g. #d97757" maxlength="9">
       <label>Background</label>
       <select x-model="settings.clawdBgColor">
         <option value="black">Black</option>
@@ -230,7 +231,8 @@
         <option value="sky">Sky</option>
         <option value="lilac">Lilac</option>
       </select>
-      <div class="hint">Changes apply when the Clawd channel is next shown (within one rotation), or immediately after Save &amp; Restart.</div>
+      <input type="text" x-model="settings.clawdBgColor" placeholder="or custom hex e.g. #0c0c10" maxlength="9">
+      <div class="hint">Pick a preset above or type a custom <code>#RRGGBB</code> hex. Changes apply when the Clawd channel is next shown (within one rotation), or immediately after Save &amp; Restart.</div>
     </article>
     <button x-on:click="saveSettings(false)" class="primary" x-bind:disabled="saving" x-text="saving ? 'Saving...' : 'Save'"></button>
   </section>
