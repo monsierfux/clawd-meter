@@ -1,6 +1,8 @@
 #include "display.h"
 #include "theme.h"
 #include <LittleFS.h>
+#include <string.h>
+#include <stdlib.h>
 TFT_eSPI tft = TFT_eSPI();
 
 // ── Typography — design-true VLW bitmap fonts ────────────────────────────
@@ -431,6 +433,20 @@ void Display::dotsDivider(int x, int y, int w) {
 
 // Channel theme color — defined here (alongside Display because that's where it's
 // used most) but declared in theme.h so other modules can call it.
+uint16_t Theme::resolveColor(const char* s) {
+    if (!s || !*s) return 0;
+    const char* h = (*s == '#') ? s + 1 : s;
+    if (strlen(h) == 6) {
+        char* end = nullptr;
+        long v = strtol(h, &end, 16);
+        if (end && *end == '\0') {
+            uint8_t r = (v >> 16) & 0xFF, g = (v >> 8) & 0xFF, b = v & 0xFF;
+            return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+        }
+    }
+    return namedColor(s);
+}
+
 uint16_t Theme::namedColor(const char* name) {
     if (!name || !*name) return 0;
     if (!strcmp(name, "coral")) return CORAL;
