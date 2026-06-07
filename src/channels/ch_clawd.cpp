@@ -290,16 +290,16 @@ void chClawdTick(const ChannelCtx& ctx) {
 
     // Normal / stressed: double-blink (closed→open→closed→open) + slow wiggle.
     uint32_t wiggleEvery = 2400 / speed;
-    uint32_t blinkEvery  = 4500 / speed;
+    uint32_t blinkEvery  = 7000 / speed;     // less frequent, calmer
     if (s_blinkPhase == 0) {
         if (now - s_lastBlink >= blinkEvery) {
             s_blinkPhase = 1; s_blinkT = now; paintEyes(expr, s_lookX, true,  eyeCol, bg);
         }
-    } else if (s_blinkPhase == 1 && now - s_blinkT >= 100) {
+    } else if (s_blinkPhase == 1 && now - s_blinkT >= 280) {
         s_blinkPhase = 2; s_blinkT = now; paintEyes(expr, s_lookX, false, eyeCol, bg);
-    } else if (s_blinkPhase == 2 && now - s_blinkT >= 70) {
+    } else if (s_blinkPhase == 2 && now - s_blinkT >= 200) {
         s_blinkPhase = 3; s_blinkT = now; paintEyes(expr, s_lookX, true,  eyeCol, bg);
-    } else if (s_blinkPhase == 3 && now - s_blinkT >= 70) {
+    } else if (s_blinkPhase == 3 && now - s_blinkT >= 280) {
         s_blinkPhase = 0; s_blinkT = now; s_lastBlink = now;
         paintEyes(expr, s_lookX, false, eyeCol, bg);
     }

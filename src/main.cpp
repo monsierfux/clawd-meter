@@ -20,6 +20,14 @@
 #include "channel.h"
 #include "mood.h"
 
+#if defined(ESP32)
+  #include <SPI.h>
+  #include <XPT2046_Touchscreen.h>
+  // CYD touch (XPT2046) on its own SPI bus: SCK=25, MISO=39, MOSI=32, CS=33, IRQ=36.
+  static SPIClass            s_touchSPI(VSPI);
+  static XPT2046_Touchscreen s_ts(33, 36);
+#endif
+
 // ── Channel registry — declared in their own .cpp files ─────────────────────
 extern bool chClaudeEnabled(const ChannelCtx&);  extern void chClaudeDraw(const ChannelCtx&);
 extern bool chClawdEnabled (const ChannelCtx&);  extern void chClawdDraw (const ChannelCtx&);
@@ -126,8 +134,10 @@ static void drawIndicator(uint32_t now) {
     if (elapsed > slideMs) elapsed = slideMs;
     int w = (int)((uint64_t)SCREEN_W * elapsed / slideMs);
 
-    uint16_t fill = !strcmp(name, "Clawd") ? clawdAccentColor()
-                                           : Theme::channelColor(name);
+    uint16_t fill;
+    if (!strcmp(name, "Clawd"))      fill = clawdAccentColor();
+    else if (Display::highlight())   fill = Display::highlight();
+    else                             fill = Theme::channelColor(name);
     tft.fillRect(0, INDICATOR_Y, SCREEN_W, INDICATOR_H, Theme::PANEL);
     if (w > 0) tft.fillRect(0, INDICATOR_Y, w, INDICATOR_H, fill);
 }
@@ -211,7 +221,9 @@ void setup() {
 
     Display::begin();
 #if defined(ESP32)
-    pinMode(TOUCH_IRQ_PIN, INPUT);          // XPT2046 PENIRQ (tap detection)
+    s_touchSPI.begin(25, 39, 32, 33);       // SCK, MISO, MOSI, CS
+    s_ts.begin(s_touchSPI);
+    s_ts.setRotation(1);                     // match landscape display
 #endif
     Display::drawSplash("booting...");
     delay(400);
@@ -342,8 +354,8 @@ void loop() {
     static bool     s_touchPrev = false;
     static uint32_t s_touchT    = 0;
     if (!g_apMode && g_settings.touchAdvance && g_activeCount > 1) {
-        bool pressed = (digitalRead(TOUCH_IRQ_PIN) == LOW);
-        if (pressed && !s_touchPrev && now - s_touchT > 250) {   // press edge + debounce
+        bool pressed = s_ts.touched();
+        if (pressed && !s_touchPrev && now - s_touchT > 300) {   // press edge + debounce
             s_touchT = now;
             recomputeActive();
             g_activePtr = (g_activePtr + 1) % g_activeCount;

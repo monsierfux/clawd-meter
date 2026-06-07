@@ -159,6 +159,7 @@ void Display::clear() {
 // Global user-chosen highlight color (0 = "auto", i.e. usage-based coloring).
 static uint16_t s_highlight = 0;
 void Display::setHighlight(uint16_t c) { s_highlight = c; }
+uint16_t Display::highlight() { return s_highlight; }
 
 // Whether usage values represent consumed % (true) or remaining % (false).
 // Controls the direction of the "auto" usage coloring.
@@ -393,8 +394,9 @@ void Display::statusBar(const char* title,
         tft.drawString(rightMeta, SCREEN_W - 4, STATUS_BOTTOM / 2);
     }
 
-    // 1-px accent under-line at y=22
-    tft.drawFastHLine(0, STATUS_BOTTOM, SCREEN_W, accent);
+    // 1-px accent under-line at y=22. Follows the user's highlight color when one
+    // is set (so the whole UI shares one accent), else the per-channel color.
+    tft.drawFastHLine(0, STATUS_BOTTOM, SCREEN_W, s_highlight ? s_highlight : accent);
 }
 
 void Display::pixelBar(int x, int y, int w, int h, float pct, uint16_t color) {
