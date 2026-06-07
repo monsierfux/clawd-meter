@@ -140,6 +140,7 @@ static void handleApiGetSettings() {
     d["showForecast"]  = s.showForecast;
     d["showInfo"]      = s.showInfo;
     d["autoRotate"]    = s.autoRotate;
+    d["touchAdvance"]  = s.touchAdvance;
     d["claudeWeeklyHero"] = s.claudeWeeklyHero;
     d["clawdMode"]     = s.clawdMode;
     d["clawdExpr"]     = s.clawdExpr;
@@ -233,6 +234,7 @@ static void applyIfPresent(Settings& s, JsonDocument& d) {
     applyBool("showForecast", s.showForecast);
     applyBool("showInfo",     s.showInfo);
     applyBool("autoRotate",   s.autoRotate);
+    applyBool("touchAdvance", s.touchAdvance);
     applyBool("claudeWeeklyHero", s.claudeWeeklyHero);
     applyBool("invertDisplay",s.invertDisplay);
     applyBool("usageShowConsumed", s.usageShowConsumed);

@@ -22,6 +22,7 @@ struct Settings {
     bool     showForecast  = true;
     bool     showInfo      = true;
     bool     autoRotate    = true;
+    bool     touchAdvance  = true;   // tap the screen → next channel (CYD touch)
     bool     claudeWeeklyHero = false;
     // ── Clawd mascot ──
     String   clawdMode     = "auto";    // "auto" (mood from Claude usage) or "manual"

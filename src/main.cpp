@@ -210,6 +210,9 @@ void setup() {
     Serial.println(F("\n=== SmallTV v" FW_VERSION " ==="));
 
     Display::begin();
+#if defined(ESP32)
+    pinMode(TOUCH_IRQ_PIN, INPUT);          // XPT2046 PENIRQ (tap detection)
+#endif
     Display::drawSplash("booting...");
     delay(400);
 
@@ -333,6 +336,23 @@ void loop() {
             Display::setBrightness(b);
         }
     }
+
+    // Touch (CYD XPT2046 PENIRQ on GPIO36): a tap advances to the next channel.
+#if defined(ESP32)
+    static bool     s_touchPrev = false;
+    static uint32_t s_touchT    = 0;
+    if (!g_apMode && g_settings.touchAdvance && g_activeCount > 1) {
+        bool pressed = (digitalRead(TOUCH_IRQ_PIN) == LOW);
+        if (pressed && !s_touchPrev && now - s_touchT > 250) {   // press edge + debounce
+            s_touchT = now;
+            recomputeActive();
+            g_activePtr = (g_activePtr + 1) % g_activeCount;
+            drawActive();
+            g_lastSlide = now;                                   // reset rotation timer
+        }
+        s_touchPrev = pressed;
+    }
+#endif
 
     // Channel auto-rotate — instant cut (no transition animation). Premium
     // devices do this; the single fillScreen+redraw in drawActive() is the
