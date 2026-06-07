@@ -31,4 +31,7 @@ namespace Theme {
     // Resolve a palette color by name ("coral"/"amber"/"mint"/"sky"/"lilac").
     // Returns 0 for "auto"/unknown (caller falls back to usage-based coloring).
     uint16_t namedColor(const char* name);
+    // Resolve a color string: "#RRGGBB" hex OR a palette name. Returns 0 for
+    // "auto"/unknown (callers treat 0 as the automatic/usage-based color).
+    uint16_t resolveColor(const char* s);
 }

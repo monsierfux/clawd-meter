@@ -255,7 +255,7 @@ static void handleApiPostSettings() {
     // Apply runtime-mutable settings immediately so the user sees the effect.
     Display::setInvert(pSettings->invertDisplay);
     Display::setBrightness(pSettings->brightness);
-    Display::setHighlight(Theme::namedColor(pSettings->highlightColor.c_str()));
+    Display::setHighlight(Theme::resolveColor(pSettings->highlightColor.c_str()));
     Display::setUsageConsumed(pSettings->usageShowConsumed);
     // POSIX TZ string: positive offset east of UTC must be expressed as a
     // NEGATIVE POSIX offset (POSIX expresses "time to ADD to local to get UTC").

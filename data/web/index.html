@@ -187,6 +187,12 @@
   <!-- CLAWD -->
   <section x-show="page==='clawd'" class="split">
     <article>
+      <h2>Preview</h2>
+      <canvas x-init="initClawdPreview($el)" width="280" height="210"
+              style="width:100%;max-width:300px;display:block;margin:.3em auto;border-radius:6px;"></canvas>
+      <div class="hint">Live preview — reflects mode, expression and colors. In Auto it cycles through the moods.</div>
+    </article>
+    <article>
       <h2>Clawd mascot</h2>
       <label>Mode</label>
       <select x-model="settings.clawdMode">
@@ -268,13 +274,18 @@
       <label>Highlight color (usage numbers + bars)</label>
       <select x-model="settings.highlightColor">
         <option value="auto">Auto (green / amber / red by usage)</option>
+        <option value="orange">Orange</option>
         <option value="coral">Coral</option>
         <option value="amber">Amber</option>
         <option value="mint">Mint</option>
         <option value="sky">Sky</option>
         <option value="lilac">Lilac</option>
+        <option value="#ffffff">Custom hex…</option>
       </select>
-      <div class="hint">Fixed accent for all usage numbers and bars, or Auto for usage-based coloring. Takes effect immediately on Save.</div>
+      <input type="text" maxlength="9" placeholder="#ffffff"
+             x-show="!['auto','orange','coral','amber','mint','sky','lilac'].includes(settings.highlightColor)"
+             x-model="settings.highlightColor">
+      <div class="hint">Fixed accent for all usage numbers and bars (preset or "Custom hex…" for a <code>#RRGGBB</code> value), or Auto for usage-based coloring. Takes effect immediately on Save.</div>
       <label class="row"><input type="checkbox" x-model="settings.usageShowConsumed">Show consumed % (instead of remaining)</label>
       <div class="hint">Off: numbers show how much quota is left. On: how much has been used (e.g. 20% used shows 20%).</div>
       <label>Timezone</label>
@@ -385,6 +396,41 @@ function app() {
       await this.loadSettings();
       // Periodic state refresh
       setInterval(() => this.refreshState(), 5000);
+    },
+
+    // Live Clawd eye preview — mirrors the firmware's shapes/animation.
+    initClawdPreview(cv) {
+      const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, S = W / 320;
+      const self = this;
+      const PAL = {orange:'#d97757',coral:'#ff5247',amber:'#ffd23f',mint:'#8fe574',sky:'#54b6ff',lilac:'#c385ff',black:'#000000'};
+      const css = (v, fb) => !v ? fb : (v[0] === '#' ? v : (PAL[v] || fb));
+      const cxL = 92*S, cxR = 228*S, cy = 104*S, ew = 78*S, eh = 84*S, v = (84/3)*S, look = 14*S;
+      const seg = (x0,y0,x1,y1,w) => { ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke(); };
+      const happy = (cx) => { const h=ew/2; seg(cx-h,cy+v,cx,cy-v,14*S); seg(cx,cy-v,cx+h,cy+v,14*S); };
+      const squish = (cx,r) => { const h=ew/2; if(r){seg(cx-h,cy-v,cx+h,cy,14*S);seg(cx+h,cy,cx-h,cy+v,14*S);} else {seg(cx+h,cy-v,cx-h,cy,14*S);seg(cx-h,cy,cx+h,cy+v,14*S);} };
+      const brow = (cx,l) => { const h=ew/2, yH=cy-eh/2-26*S, yL=cy-eh/2-12*S; l?seg(cx-h,yL,cx+h,yH,9*S):seg(cx-h,yH,cx+h,yL,9*S); };
+      const open = (cx,ox) => ctx.fillRect(cx-ew/2+ox, cy-eh/2, ew, eh);
+      const shut = (cx) => ctx.fillRect(cx-ew/2, cy-6*S, ew, 12*S);
+      const sleepy = (cx) => ctx.fillRect(cx-ew/2, cy-4*S, ew, 8*S);
+      const loop = (t) => {
+        const eye = css(self.settings.clawdEyeColor, '#000000');
+        const bg  = css(self.settings.clawdBgColor, '#d97757');
+        let expr = self.settings.clawdExpr || 'normal';
+        if (self.settings.clawdMode !== 'manual') expr = ['happy','squish','normal','stressed'][Math.floor(t/1800)%4];
+        ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+        ctx.fillStyle = eye; ctx.strokeStyle = eye; ctx.lineCap='butt'; ctx.lineJoin='miter';
+        const c = t % 3000, blink = (c>2600&&c<2700)||(c>2770&&c<2840);
+        const wig = Math.floor(t/1000)%3, ox = wig===1?look:(wig===2?-look:0);
+        if (expr==='happy') { happy(cxL); happy(cxR); }
+        else if (expr==='squish') { if((t%1100)>900){shut(cxL);shut(cxR);} else {squish(cxL,true);squish(cxR,false);} }
+        else if (expr==='sleepy') { sleepy(cxL); sleepy(cxR); }
+        else if (expr==='stressed') { if(blink){shut(cxL);shut(cxR);}else{open(cxL,ox);open(cxR,ox);} brow(cxL,true); brow(cxR,false); }
+        else if (expr==='code') { ctx.fillRect(0,cy-24*S,W,4*S); ctx.font=Math.round(15*S)+'px monospace'; ctx.textAlign='center'; ctx.fillText('Claude Code',W/2,cy+10*S); }
+        else if (expr==='logo') { ctx.font='bold '+Math.round(18*S)+'px monospace'; ctx.textAlign='center'; ctx.fillText('CLAWD',W/2,cy+8*S); }
+        else { if(blink){shut(cxL);shut(cxR);}else{open(cxL,ox);open(cxR,ox);} }
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
     },
 
     async refreshState() {

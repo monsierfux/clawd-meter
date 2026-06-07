@@ -26,7 +26,7 @@
 // Square eyes (mochi style), wide gap between them.
 static const int EYE_CX_L = 92;
 static const int EYE_CX_R = 228;
-static const int EYE_CY   = 120;
+static const int EYE_CY   = 104;    // sit a little above center (mochi look)
 static const int EYE_W    = 78;
 static const int EYE_H    = 84;
 static const int LOOK_MAX = 14;     // max horizontal pupil wiggle
@@ -34,14 +34,17 @@ static const int LOOK_MAX = 14;     // max horizontal pupil wiggle
 enum Expr { EX_NORMAL, EX_HAPPY, EX_SQUISH, EX_STRESSED, EX_SLEEPY, EX_CODE, EX_LOGO };
 
 // ── tick cache ──
-static int      s_expr      = -1;
-static int      s_lookX     = 0;
-static bool     s_blink     = false;
-static uint32_t s_lastWiggle= 0;
-static uint32_t s_lastBlink = 0;
-static uint16_t s_eyeCol    = 0;
-static uint16_t s_bgCol     = 0xFFFF;
-static char     s_footer[20]= "";
+static int      s_expr       = -1;
+static int      s_lookX      = 0;
+static int      s_blinkPhase = 0;   // 0 open · 1 closed · 2 brief-open · 3 closed (double-blink)
+static uint32_t s_blinkT     = 0;
+static uint32_t s_lastWiggle = 0;
+static uint32_t s_lastBlink  = 0;
+static bool     s_squishClosed = false;
+static uint32_t s_squishT    = 0;
+static uint16_t s_eyeCol     = 0;
+static uint16_t s_bgCol      = 0xFFFF;
+static char     s_footer[20] = "";
 
 bool chClawdEnabled(const ChannelCtx& ctx) {
     return ctx.settings && ctx.settings->showClawd;
@@ -100,7 +103,7 @@ static Expr resolveExpr(const ChannelCtx& ctx, float& usedOut) {
     return EX_NORMAL;
 }
 
-static bool isAnimated(int e) { return e == EX_NORMAL || e == EX_STRESSED; }
+static bool isAnimated(int e) { return e == EX_NORMAL || e == EX_STRESSED || e == EX_SQUISH; }
 
 // Clear the rectangular band that holds both eyes (generous for wiggle).
 static void clearEyeBand(uint16_t bg) {
@@ -166,8 +169,11 @@ static void paintEyes(int expr, int lookX, bool blink, uint16_t eyeCol, uint16_t
             drawHappyEye(EYE_CX_R, eyeCol);
             break;
         case EX_SQUISH:
-            drawSquishEye(EYE_CX_L, true,  eyeCol);
-            drawSquishEye(EYE_CX_R, false, eyeCol);
+            if (blink) { drawBlinkEye(EYE_CX_L, eyeCol); drawBlinkEye(EYE_CX_R, eyeCol); }
+            else {
+                drawSquishEye(EYE_CX_L, true,  eyeCol);
+                drawSquishEye(EYE_CX_R, false, eyeCol);
+            }
             break;
         case EX_SLEEPY:
             drawSleepyEye(EYE_CX_L, eyeCol);
@@ -240,7 +246,7 @@ void chClawdDraw(const ChannelCtx& ctx) {
         tft.setTextColor(Theme::INK, bg);
         tft.drawString("CLAWD", SCREEN_W/2, EYE_CY + 8);
     } else {
-        s_lookX = 0; s_blink = false;
+        s_lookX = 0; s_blinkPhase = 0; s_squishClosed = false;
         paintEyes(expr, 0, false, eyeCol, bg);
     }
 
@@ -248,7 +254,7 @@ void chClawdDraw(const ChannelCtx& ctx) {
 
     // seed cache
     s_expr = expr; s_eyeCol = eyeCol; s_bgCol = bg;
-    s_lastWiggle = s_lastBlink = ctx.now_ms;
+    s_lastWiggle = s_lastBlink = s_blinkT = s_squishT = ctx.now_ms;
 }
 
 // ── tick: blink / wiggle / footer ──
@@ -270,21 +276,36 @@ void chClawdTick(const ChannelCtx& ctx) {
     if (!isAnimated(expr)) return;
 
     int speed = ctx.settings->clawdSpeed; if (speed < 1) speed = 1; if (speed > 3) speed = 3;
-    uint32_t wiggleEvery = 2400 / speed;     // ms
-    uint32_t blinkEvery  = 4500 / speed;
     uint32_t now = ctx.now_ms;
 
-    // Blink: quick close→open (~140 ms).
-    if (!s_blink && now - s_lastBlink >= blinkEvery) {
-        s_blink = true; s_lastBlink = now;
-        paintEyes(expr, s_lookX, true, eyeCol, bg);
-    } else if (s_blink && now - s_lastBlink >= 140) {
-        s_blink = false; s_lastBlink = now;
+    // Squish: gently squint open/closed (chevron <-> line).
+    if (expr == EX_SQUISH) {
+        if (!s_squishClosed && now - s_squishT >= (uint32_t)(1600 / speed)) {
+            s_squishClosed = true;  s_squishT = now; paintEyes(expr, 0, true,  eyeCol, bg);
+        } else if (s_squishClosed && now - s_squishT >= 180) {
+            s_squishClosed = false; s_squishT = now; paintEyes(expr, 0, false, eyeCol, bg);
+        }
+        return;
+    }
+
+    // Normal / stressed: double-blink (closed→open→closed→open) + slow wiggle.
+    uint32_t wiggleEvery = 2400 / speed;
+    uint32_t blinkEvery  = 4500 / speed;
+    if (s_blinkPhase == 0) {
+        if (now - s_lastBlink >= blinkEvery) {
+            s_blinkPhase = 1; s_blinkT = now; paintEyes(expr, s_lookX, true,  eyeCol, bg);
+        }
+    } else if (s_blinkPhase == 1 && now - s_blinkT >= 100) {
+        s_blinkPhase = 2; s_blinkT = now; paintEyes(expr, s_lookX, false, eyeCol, bg);
+    } else if (s_blinkPhase == 2 && now - s_blinkT >= 70) {
+        s_blinkPhase = 3; s_blinkT = now; paintEyes(expr, s_lookX, true,  eyeCol, bg);
+    } else if (s_blinkPhase == 3 && now - s_blinkT >= 70) {
+        s_blinkPhase = 0; s_blinkT = now; s_lastBlink = now;
         paintEyes(expr, s_lookX, false, eyeCol, bg);
     }
 
-    // Wiggle: shift pupils left/center/right.
-    if (!s_blink && now - s_lastWiggle >= wiggleEvery) {
+    // Wiggle only while fully open (not mid-blink).
+    if (s_blinkPhase == 0 && now - s_lastWiggle >= wiggleEvery) {
         s_lastWiggle = now;
         int next = (s_lookX == 0) ? LOOK_MAX : (s_lookX > 0 ? -LOOK_MAX : 0);
         s_lookX = next;

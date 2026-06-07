@@ -217,7 +217,7 @@ void setup() {
     g_settings = Storage::load();
     Display::setBrightness(g_settings.brightness);
     Display::setInvert(g_settings.invertDisplay);
-    Display::setHighlight(Theme::namedColor(g_settings.highlightColor.c_str()));
+    Display::setHighlight(Theme::resolveColor(g_settings.highlightColor.c_str()));
     Display::setUsageConsumed(g_settings.usageShowConsumed);
 
     Display::drawSplash("connecting WiFi");
