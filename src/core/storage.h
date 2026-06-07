@@ -1,0 +1,65 @@
+#pragma once
+#include <Arduino.h>
+#include <ArduinoJson.h>
+
+// All persisted settings. Loaded from /config.json on LittleFS, fall back to defaults.
+struct Settings {
+    String   wifiSSID;
+    String   wifiPass;
+    String   claudeKey;        // sk-ant-sid02-...
+    uint32_t refreshMin    = 5;
+    uint32_t channelSec    = 8;
+    uint8_t  brightness    = 80;     // 0-100
+    int8_t   tzOffset      = 0;      // legacy: hours from UTC, -12..+14
+    int16_t  tzMinutes     = 0;      // signed offset from UTC in minutes;
+                                     // takes precedence over tzOffset when non-zero.
+                                     // Range: -720 (UTC-12:00) .. +840 (UTC+14:00).
+                                     // Allows 30/45-minute timezones (India +330, Nepal +345).
+    bool     showClaude    = true;
+    bool     showClawd     = true;   // Clawd mascot channel
+    bool     showHome      = true;
+    bool     showClock     = true;
+    bool     showForecast  = true;
+    bool     showInfo      = true;
+    bool     autoRotate    = true;
+    bool     claudeWeeklyHero = false;
+    // ── Clawd mascot ──
+    String   clawdMode     = "auto";    // "auto" (mood from Claude usage) or "manual"
+    String   clawdExpr     = "normal";  // manual expression: normal/squish/code/logo
+    uint8_t  clawdSpeed    = 2;         // 1 slow · 2 normal · 3 fast
+    String   clawdEyeColor = "sky";     // palette name (coral/amber/mint/sky/lilac)
+    String   clawdBgColor  = "black";   // palette name; "black" → 0x0000
+    // Display polarity for this panel — ST7789 (SmallTV-Ultra) needs true,
+    // ILI9341 (CYD/ESP32) needs false. Web UI exposes a runtime toggle.
+    bool     invertDisplay = true;   // ST7789 (Ultra) and this CYD ILI9341 both need INVON
+    // Global highlight/accent color for usage numbers + bars.
+    // "auto" = usage-based (green/amber/red); or "coral"/"amber"/"mint"/"sky"/"lilac".
+    String   highlightColor = "auto";
+    // Usage metric polarity: false = show REMAINING % (default, original behavior),
+    // true = show CONSUMED %. Affects Claude + Home usage numbers, bars and colors.
+    bool     usageShowConsumed = false;
+    bool     nightDim      = false;
+    uint8_t  nightStart    = 22;
+    uint8_t  nightEnd      = 7;
+    uint8_t  nightBright   = 15;
+
+    // Weather (Open-Meteo, no key needed)
+    float    weatherLat    = 0.0f;
+    float    weatherLon    = 0.0f;
+    bool     showWeather   = true;
+    bool     useFahrenheit = false;
+
+    // Personalization
+    String   userName;                // shown on splash + birthday
+    String   birthday;                // MM-DD format, e.g. "07-15"
+
+    // Push API auth (also used for MCP)
+    String   apiToken;                // bearer token for /push and /mcp
+};
+
+namespace Storage {
+    void     begin();           // mounts LittleFS
+    Settings load();
+    bool     save(const Settings& s);
+    void     factoryReset();
+}
