@@ -424,7 +424,7 @@ function app() {
         const c = t % 7000, blink = (c>6400&&c<6600)||(c>6700&&c<6900);
         const wig = Math.floor(t/1000)%3, ox = wig===1?look:(wig===2?-look:0);
         if (expr==='happy') { happy(cxL); happy(cxR); }
-        else if (expr==='squish') { if((t%1100)>900){shut(cxL);shut(cxR);} else {squish(cxL,true);squish(cxR,false);} }
+        else if (expr==='squish') { if((t%2200)>2000){shut(cxL);shut(cxR);} else {squish(cxL,true);squish(cxR,false);} }
         else if (expr==='sleepy') { sleepy(cxL); sleepy(cxR); }
         else if (expr==='stressed') { if(blink){shut(cxL);shut(cxR);}else{open(cxL,ox);open(cxR,ox);} brow(cxL,true); brow(cxR,false); }
         else if (expr==='code') { ctx.fillRect(0,cy-24*S,W,4*S); ctx.font=Math.round(15*S)+'px monospace'; ctx.textAlign='center'; ctx.fillText('Claude Code',W/2,cy+10*S); }

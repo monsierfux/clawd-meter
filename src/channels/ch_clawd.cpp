@@ -280,7 +280,7 @@ void chClawdTick(const ChannelCtx& ctx) {
 
     // Squish: gently squint open/closed (chevron <-> line).
     if (expr == EX_SQUISH) {
-        if (!s_squishClosed && now - s_squishT >= (uint32_t)(1600 / speed)) {
+        if (!s_squishClosed && now - s_squishT >= (uint32_t)(3200 / speed)) {
             s_squishClosed = true;  s_squishT = now; paintEyes(expr, 0, true,  eyeCol, bg);
         } else if (s_squishClosed && now - s_squishT >= 180) {
             s_squishClosed = false; s_squishT = now; paintEyes(expr, 0, false, eyeCol, bg);
