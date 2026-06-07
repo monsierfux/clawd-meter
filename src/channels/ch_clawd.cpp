@@ -48,7 +48,9 @@ bool chClawdEnabled(const ChannelCtx& ctx) {
 // ── helpers ──
 
 static uint16_t eyeColor(const ChannelCtx& ctx) {
-    uint16_t c = Theme::namedColor(ctx.settings->clawdEyeColor.c_str());
+    const String& n = ctx.settings->clawdEyeColor;
+    if (n == "black") return Theme::BG;          // 0x0000 (use with a colored bg)
+    uint16_t c = Theme::namedColor(n.c_str());
     return c ? c : Theme::SKY;
 }
 static uint16_t bgColor(const ChannelCtx& ctx) {
