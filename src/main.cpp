@@ -38,6 +38,7 @@ extern void chWeatherTick    (const ChannelCtx&);
 extern void chForecastTick   (const ChannelCtx&);
 extern void chInfoTick       (const ChannelCtx&);
 extern void weatherTick      (const Settings&);
+extern uint16_t clawdAccentColor();
 
 static const Channel kChannels[] = {
     //  name        enabled              draw                  tick
@@ -125,8 +126,10 @@ static void drawIndicator(uint32_t now) {
     if (elapsed > slideMs) elapsed = slideMs;
     int w = (int)((uint64_t)SCREEN_W * elapsed / slideMs);
 
+    uint16_t fill = !strcmp(name, "Clawd") ? clawdAccentColor()
+                                           : Theme::channelColor(name);
     tft.fillRect(0, INDICATOR_Y, SCREEN_W, INDICATOR_H, Theme::PANEL);
-    if (w > 0) tft.fillRect(0, INDICATOR_Y, w, INDICATOR_H, Theme::channelColor(name));
+    if (w > 0) tft.fillRect(0, INDICATOR_Y, w, INDICATOR_H, fill);
 }
 
 // ── WiFi orchestration ───────────────────────────────────────────────────────

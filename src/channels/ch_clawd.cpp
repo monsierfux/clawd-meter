@@ -20,6 +20,7 @@
 #include "api.h"
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 // ── Geometry (320x240 landscape) ──
 // Square eyes (mochi style), wide gap between them.
@@ -30,7 +31,7 @@ static const int EYE_W    = 78;
 static const int EYE_H    = 84;
 static const int LOOK_MAX = 14;     // max horizontal pupil wiggle
 
-enum Expr { EX_NORMAL, EX_HAPPY, EX_STRESSED, EX_SLEEPY, EX_CODE, EX_LOGO };
+enum Expr { EX_NORMAL, EX_HAPPY, EX_SQUISH, EX_STRESSED, EX_SLEEPY, EX_CODE, EX_LOGO };
 
 // ── tick cache ──
 static int      s_expr      = -1;
@@ -45,6 +46,10 @@ static char     s_footer[20]= "";
 bool chClawdEnabled(const ChannelCtx& ctx) {
     return ctx.settings && ctx.settings->showClawd;
 }
+
+// Current resolved eye color — used by main.cpp's rotation indicator so the
+// progress strip stays visible against the Clawd background.
+uint16_t clawdAccentColor() { return s_eyeCol; }
 
 // ── helpers ──
 
@@ -79,7 +84,8 @@ static Expr resolveExpr(const ChannelCtx& ctx, float& usedOut) {
     usedOut = -1.f;
     if (ctx.settings->clawdMode == "manual") {
         const String& e = ctx.settings->clawdExpr;
-        if (e == "squish") return EX_HAPPY;
+        if (e == "happy")  return EX_HAPPY;
+        if (e == "squish") return EX_SQUISH;
         if (e == "code")   return EX_CODE;
         if (e == "logo")   return EX_LOGO;
         return EX_NORMAL;
@@ -88,8 +94,9 @@ static Expr resolveExpr(const ChannelCtx& ctx, float& usedOut) {
     if (p < 0) return EX_SLEEPY;
     float used = ctx.settings->usageShowConsumed ? p : (100.f - p);
     usedOut = used;
-    if (used >= 85.f) return EX_STRESSED;
-    if (used <  55.f) return EX_HAPPY;
+    if (used >= 85.f) return EX_STRESSED;   // near limit
+    if (used <  40.f) return EX_HAPPY;      // lots left  → ^ ^
+    if (used <  60.f) return EX_SQUISH;     // good       → > <
     return EX_NORMAL;
 }
 
@@ -97,8 +104,22 @@ static bool isAnimated(int e) { return e == EX_NORMAL || e == EX_STRESSED; }
 
 // Clear the rectangular band that holds both eyes (generous for wiggle).
 static void clearEyeBand(uint16_t bg) {
-    tft.fillRect(EYE_CX_L - EYE_W/2 - LOOK_MAX - 6, EYE_CY - EYE_H/2 - 24,
-                 (EYE_CX_R - EYE_CX_L) + EYE_W + 2*(LOOK_MAX + 6), EYE_H + 48, bg);
+    tft.fillRect(EYE_CX_L - EYE_W/2 - LOOK_MAX - 6, EYE_CY - EYE_H/2 - 32,
+                 (EYE_CX_R - EYE_CX_L) + EYE_W + 2*(LOOK_MAX + 6), EYE_H + 72, bg);
+}
+
+// Blocky thick segment with SQUARE ends (two filled triangles) — gives the
+// angular, no-anti-alias look of the mochi eyes.
+static void thickLine(int x0, int y0, int x1, int y1, int w, uint16_t col) {
+    float dx = x1 - x0, dy = y1 - y0, len = sqrtf(dx*dx + dy*dy);
+    if (len < 0.5f) return;
+    float ox = -dy / len * (w * 0.5f), oy = dx / len * (w * 0.5f);
+    int ax = lroundf(x0 + ox), ay = lroundf(y0 + oy);
+    int bx = lroundf(x0 - ox), by = lroundf(y0 - oy);
+    int cx = lroundf(x1 - ox), cy = lroundf(y1 - oy);
+    int ex = lroundf(x1 + ox), ey = lroundf(y1 + oy);
+    tft.fillTriangle(ax, ay, bx, by, cx, cy, col);
+    tft.fillTriangle(ax, ay, cx, cy, ex, ey, col);
 }
 
 static void drawOpenEye(int cx, int lookX, int h, uint16_t col) {
@@ -107,26 +128,33 @@ static void drawOpenEye(int cx, int lookX, int h, uint16_t col) {
 static void drawBlinkEye(int cx, uint16_t col) {
     tft.fillRect(cx - EYE_W/2, EYE_CY - 6, EYE_W, 12, col);
 }
-// Squish "> <" happy squint (mochi style): left eye ">", right eye "<".
-static void drawSquishEye(int cx, bool pointRight, uint16_t col, uint16_t bg) {
-    int half = EYE_W/2;
-    int v    = EYE_H/3;
-    if (pointRight) {   // ">"
-        tft.drawWideLine(cx - half, EYE_CY - v, cx + half, EYE_CY,     11, col, bg);
-        tft.drawWideLine(cx + half, EYE_CY,     cx - half, EYE_CY + v, 11, col, bg);
-    } else {            // "<"
-        tft.drawWideLine(cx + half, EYE_CY - v, cx - half, EYE_CY,     11, col, bg);
-        tft.drawWideLine(cx - half, EYE_CY,     cx + half, EYE_CY + v, 11, col, bg);
+// Happy "^ ^": blocky caret, apex on top.
+static void drawHappyEye(int cx, uint16_t col) {
+    int half = EYE_W/2, v = EYE_H/3, t = 14;
+    thickLine(cx - half, EYE_CY + v, cx,        EYE_CY - v, t, col);
+    thickLine(cx,        EYE_CY - v, cx + half, EYE_CY + v, t, col);
+}
+// Squish "> <": blocky chevron — left eye ">", right eye "<".
+static void drawSquishEye(int cx, bool pointRight, uint16_t col) {
+    int half = EYE_W/2, v = EYE_H/3, t = 14;
+    if (pointRight) {   // ">"  apex on the right
+        thickLine(cx - half, EYE_CY - v, cx + half, EYE_CY,     t, col);
+        thickLine(cx + half, EYE_CY,     cx - half, EYE_CY + v, t, col);
+    } else {            // "<"  apex on the left
+        thickLine(cx + half, EYE_CY - v, cx - half, EYE_CY,     t, col);
+        thickLine(cx - half, EYE_CY,     cx + half, EYE_CY + v, t, col);
     }
 }
 static void drawSleepyEye(int cx, uint16_t col) {
     tft.fillRect(cx - EYE_W/2, EYE_CY - 4, EYE_W, 8, col);
 }
-static void drawBrow(int cx, bool left, uint16_t col, uint16_t bg) {
+// Worried brows, sitting well above the eyes (inner ends raised).
+static void drawBrow(int cx, bool leftBrow, uint16_t col) {
     int half = EYE_W/2;
-    int y0 = EYE_CY - EYE_H/2 - 14, y1 = EYE_CY - EYE_H/2 - 2;
-    if (left) tft.drawWideLine(cx - half, y0, cx + half, y1, 7, col, bg);   // \  worried
-    else      tft.drawWideLine(cx - half, y1, cx + half, y0, 7, col, bg);   //  /
+    int yHi = EYE_CY - EYE_H/2 - 26;   // inner (raised)
+    int yLo = EYE_CY - EYE_H/2 - 12;   // outer
+    if (leftBrow) thickLine(cx - half, yLo, cx + half, yHi, 9, col);  // "/"
+    else          thickLine(cx - half, yHi, cx + half, yLo, 9, col);  // "\"
 }
 
 // Paint the eye pair for the current expression + animation state.
@@ -134,8 +162,12 @@ static void paintEyes(int expr, int lookX, bool blink, uint16_t eyeCol, uint16_t
     clearEyeBand(bg);
     switch (expr) {
         case EX_HAPPY:
-            drawSquishEye(EYE_CX_L, true,  eyeCol, bg);
-            drawSquishEye(EYE_CX_R, false, eyeCol, bg);
+            drawHappyEye(EYE_CX_L, eyeCol);
+            drawHappyEye(EYE_CX_R, eyeCol);
+            break;
+        case EX_SQUISH:
+            drawSquishEye(EYE_CX_L, true,  eyeCol);
+            drawSquishEye(EYE_CX_R, false, eyeCol);
             break;
         case EX_SLEEPY:
             drawSleepyEye(EYE_CX_L, eyeCol);
@@ -149,8 +181,8 @@ static void paintEyes(int expr, int lookX, bool blink, uint16_t eyeCol, uint16_t
                 drawOpenEye(EYE_CX_L, lookX, EYE_H, eyeCol);
                 drawOpenEye(EYE_CX_R, lookX, EYE_H, eyeCol);
             }
-            drawBrow(EYE_CX_L, true,  eyeCol, bg);
-            drawBrow(EYE_CX_R, false, eyeCol, bg);
+            drawBrow(EYE_CX_L, true,  eyeCol);
+            drawBrow(EYE_CX_R, false, eyeCol);
             break;
         }
         case EX_NORMAL:
