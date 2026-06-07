@@ -25,6 +25,7 @@ namespace Theme {
     constexpr uint16_t MINT     = 0x8F2E;  // #8FE574  Info / OK
     constexpr uint16_t SKY      = 0x55BF;  // #54B6FF  Weather
     constexpr uint16_t LILAC    = 0xC43F;  // #C385FF  Codex
+    constexpr uint16_t ORANGE   = 0xD880;  // #DA1100  Clawd (mochi orange)
     // Theme color for a named channel — used by the channel indicator strip.
     uint16_t channelColor(const char* name);
     // Resolve a palette color by name ("coral"/"amber"/"mint"/"sky"/"lilac").

@@ -21,12 +21,12 @@
 #include <string.h>
 
 // ── Geometry (320x240 landscape) ──
-static const int EYE_CX_L = 108;
-static const int EYE_CX_R = 212;
-static const int EYE_CY   = 124;
-static const int EYE_W    = 64;
-static const int EYE_H    = 92;
-static const int EYE_R    = 22;
+// Square eyes (mochi style), wide gap between them.
+static const int EYE_CX_L = 92;
+static const int EYE_CX_R = 228;
+static const int EYE_CY   = 120;
+static const int EYE_W    = 78;
+static const int EYE_H    = 84;
 static const int LOOK_MAX = 14;     // max horizontal pupil wiggle
 
 enum Expr { EX_NORMAL, EX_HAPPY, EX_STRESSED, EX_SLEEPY, EX_CODE, EX_LOGO };
@@ -84,18 +84,25 @@ static void clearEyeBand(uint16_t bg) {
 }
 
 static void drawOpenEye(int cx, int lookX, int h, uint16_t col) {
-    tft.fillRoundRect(cx - EYE_W/2 + lookX, EYE_CY - h/2, EYE_W, h, EYE_R, col);
+    tft.fillRect(cx - EYE_W/2 + lookX, EYE_CY - h/2, EYE_W, h, col);
 }
 static void drawBlinkEye(int cx, uint16_t col) {
-    tft.fillRoundRect(cx - EYE_W/2, EYE_CY - 6, EYE_W, 12, 6, col);
+    tft.fillRect(cx - EYE_W/2, EYE_CY - 6, EYE_W, 12, col);
 }
-static void drawHappyEye(int cx, uint16_t col, uint16_t bg) {
+// Squish "> <" happy squint (mochi style): left eye ">", right eye "<".
+static void drawSquishEye(int cx, bool pointRight, uint16_t col, uint16_t bg) {
     int half = EYE_W/2;
-    tft.drawWideLine(cx - half, EYE_CY + 14, cx, EYE_CY - 14, 9, col, bg);
-    tft.drawWideLine(cx, EYE_CY - 14, cx + half, EYE_CY + 14, 9, col, bg);
+    int v    = EYE_H/3;
+    if (pointRight) {   // ">"
+        tft.drawWideLine(cx - half, EYE_CY - v, cx + half, EYE_CY,     11, col, bg);
+        tft.drawWideLine(cx + half, EYE_CY,     cx - half, EYE_CY + v, 11, col, bg);
+    } else {            // "<"
+        tft.drawWideLine(cx + half, EYE_CY - v, cx - half, EYE_CY,     11, col, bg);
+        tft.drawWideLine(cx - half, EYE_CY,     cx + half, EYE_CY + v, 11, col, bg);
+    }
 }
 static void drawSleepyEye(int cx, uint16_t col) {
-    tft.fillRoundRect(cx - EYE_W/2, EYE_CY - 4, EYE_W, 8, 4, col);
+    tft.fillRect(cx - EYE_W/2, EYE_CY - 4, EYE_W, 8, col);
 }
 static void drawBrow(int cx, bool left, uint16_t col, uint16_t bg) {
     int half = EYE_W/2;
@@ -109,8 +116,8 @@ static void paintEyes(int expr, int lookX, bool blink, uint16_t eyeCol, uint16_t
     clearEyeBand(bg);
     switch (expr) {
         case EX_HAPPY:
-            drawHappyEye(EYE_CX_L, eyeCol, bg);
-            drawHappyEye(EYE_CX_R, eyeCol, bg);
+            drawSquishEye(EYE_CX_L, true,  eyeCol, bg);
+            drawSquishEye(EYE_CX_R, false, eyeCol, bg);
             break;
         case EX_SLEEPY:
             drawSleepyEye(EYE_CX_L, Theme::MUTED);

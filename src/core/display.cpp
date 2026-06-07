@@ -438,6 +438,7 @@ uint16_t Theme::namedColor(const char* name) {
     if (!strcmp(name, "mint"))  return MINT;
     if (!strcmp(name, "sky"))   return SKY;
     if (!strcmp(name, "lilac")) return LILAC;
+    if (!strcmp(name, "orange")) return ORANGE;
     return 0;   // "auto" / unknown
 }
 
