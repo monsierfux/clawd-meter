@@ -197,7 +197,8 @@
       <label>Expression (manual mode)</label>
       <select x-model="settings.clawdExpr" x-bind:disabled="settings.clawdMode!=='manual'">
         <option value="normal">Normal eyes</option>
-        <option value="squish">Squish / happy</option>
+        <option value="happy">Happy ( ^ ^ )</option>
+        <option value="squish">Squish ( &gt; &lt; )</option>
         <option value="code">Claude Code</option>
         <option value="logo">Clawd logo</option>
       </select>
@@ -219,8 +220,11 @@
         <option value="mint">Mint</option>
         <option value="sky">Sky</option>
         <option value="lilac">Lilac</option>
+        <option value="#ffffff">Custom hex…</option>
       </select>
-      <input type="text" x-model="settings.clawdEyeColor" placeholder="or custom hex e.g. #d97757" maxlength="9">
+      <input type="text" maxlength="9" placeholder="#ffffff"
+             x-show="!['orange','black','coral','amber','mint','sky','lilac'].includes(settings.clawdEyeColor)"
+             x-model="settings.clawdEyeColor">
       <label>Background</label>
       <select x-model="settings.clawdBgColor">
         <option value="black">Black</option>
@@ -230,9 +234,12 @@
         <option value="mint">Mint</option>
         <option value="sky">Sky</option>
         <option value="lilac">Lilac</option>
+        <option value="#ffffff">Custom hex…</option>
       </select>
-      <input type="text" x-model="settings.clawdBgColor" placeholder="or custom hex e.g. #0c0c10" maxlength="9">
-      <div class="hint">Pick a preset above or type a custom <code>#RRGGBB</code> hex. Changes apply when the Clawd channel is next shown (within one rotation), or immediately after Save &amp; Restart.</div>
+      <input type="text" maxlength="9" placeholder="#ffffff"
+             x-show="!['black','orange','coral','amber','mint','sky','lilac'].includes(settings.clawdBgColor)"
+             x-model="settings.clawdBgColor">
+      <div class="hint">Choose a preset, or "Custom hex…" to type a <code>#RRGGBB</code> value. Changes apply when the Clawd channel is next shown (within one rotation), or immediately after Save &amp; Restart.</div>
     </article>
     <button x-on:click="saveSettings(false)" class="primary" x-bind:disabled="saving" x-text="saving ? 'Saving...' : 'Save'"></button>
   </section>
