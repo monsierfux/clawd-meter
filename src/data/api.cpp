@@ -1,0 +1,252 @@
+#include "api.h"
+#include "display.h"
+#include "compat.h"
+#if defined(ESP32)
+  #include <WiFiClientSecure.h>
+  #include <HTTPClient.h>
+#else
+  #include <WiFiClientSecureBearSSL.h>
+  #include <ESP8266HTTPClient.h>
+#endif
+#include <ArduinoJson.h>
+
+// ── time parsing ─────────────────────────────────────────────────────────────
+
+static time_t parseISO8601(const char* s) {
+    if (!s || strlen(s) < 19) return 0;
+    struct tm t = {};
+    if (sscanf(s, "%d-%d-%dT%d:%d:%d",
+               &t.tm_year, &t.tm_mon, &t.tm_mday,
+               &t.tm_hour, &t.tm_min, &t.tm_sec) < 6) return 0;
+    t.tm_year -= 1900;
+    t.tm_mon  -= 1;
+    // The API returns UTC timestamps. mktime uses local TZ, so temporarily
+    // force UTC, parse, then restore.
+    char* prev = getenv("TZ");
+    String backup = prev ? prev : "";
+    setenv("TZ", "UTC0", 1); tzset();
+    time_t r = mktime(&t);
+    if (backup.length()) setenv("TZ", backup.c_str(), 1); else unsetenv("TZ");
+    tzset();
+    return r;
+}
+
+String Api::formatCountdown(time_t t) {
+    time_t now = time(nullptr);
+    if (now < 1000000000L) return "--";                 // clock not synced yet
+    long diff = (long)(t - now);
+    if (diff <= 0) return "now";
+    long h = diff / 3600;
+    long m = (diff % 3600) / 60;
+    if (h >= 24) { char b[8]; snprintf(b, sizeof(b), "%ldd", (h + 12) / 24); return b; }
+    if (h >= 1)  { char b[10]; snprintf(b, sizeof(b), "%ldh %ldm", h, m);   return b; }
+    char b[8]; snprintf(b, sizeof(b), "%ldm", m); return b;
+}
+
+// ── shared TLS GET ───────────────────────────────────────────────────────────
+//
+// ESP8266 BearSSL is memory-hungry. We use a fresh client per request and free
+// it before deserialization to give ArduinoJson room.
+
+// Single TLS GET attempt. Returns true only on HTTP 200. httpCode is set
+// to a negative HTTPClient error code on connection-level failure.
+static bool tlsGetOnce(const String& url,
+                       const std::function<void(HTTPClient&)>& addHeaders,
+                       String& body, int& httpCode) {
+#if defined(ESP32)
+    WiFiClientSecure sc;
+    sc.setInsecure();
+#else
+    BearSSL::WiFiClientSecure sc;
+    sc.setInsecure();
+    sc.setBufferSizes(4096, 1024);                      // 4K rx (cert chain), 1K tx
+#endif
+    HTTPClient http;
+    http.useHTTP10(true);                               // simpler/predictable, no chunked
+    http.setTimeout(15000);
+    if (!http.begin(sc, url)) {
+        httpCode = -2;                                  // -2 = begin() failed (URL/TLS init)
+        Serial.printf("[tls] http.begin failed, heap=%u, maxblk=%u\n",
+                      ESP.getFreeHeap(), compatMaxFreeBlock());
+        return false;
+    }
+    addHeaders(http);
+    httpCode = http.GET();                              // negative = HTTPClient error
+    Serial.printf("[tls] GET → %d, heap=%u, maxblk=%u\n",
+                  httpCode, ESP.getFreeHeap(), compatMaxFreeBlock());
+    if (httpCode == HTTP_CODE_OK) body = http.getString();
+    http.end();
+    return httpCode == HTTP_CODE_OK;
+}
+
+// Wraps tlsGetOnce with a single auto-retry on transient connection
+// failures. BearSSL handshakes on ESP8266 fail ~5-10% of the time under
+// heap pressure; a brief retry after BearSSL teardown recovers most.
+static bool tlsGet(const String& url, const std::function<void(HTTPClient&)>& addHeaders,
+                  String& body, int& httpCode) {
+    // Free the VLW font cache (~2-5 KB) and let the heap settle before BearSSL
+    // alloc — TLS 1.2 handshake needs ~25 KB peak and ESP8266 is tight.
+    Display::releaseFont();
+    yield(); delay(20);
+
+    Serial.printf("[tls] heap=%u maxblk=%u url=%s\n",
+                  ESP.getFreeHeap(), compatMaxFreeBlock(), url.c_str());
+
+    if (tlsGetOnce(url, addHeaders, body, httpCode)) return true;
+
+    // Retry once on connection-level failures (negative codes). Don't retry
+    // on real HTTP errors (4xx/5xx) — those are server-side and a retry won't
+    // help in the same poll cycle.
+    if (httpCode < 0) {
+        Serial.printf("[tls] retry after %d ...\n", httpCode);
+        yield(); delay(200);                            // let BearSSL/heap settle
+        if (tlsGetOnce(url, addHeaders, body, httpCode)) {
+            Serial.printf("[tls] retry succeeded\n");
+            return true;
+        }
+        Serial.printf("[tls] retry also failed (%d)\n", httpCode);
+    }
+    return false;
+}
+
+// ── Transient failure suppression ────────────────────────────────────────────
+// Swallow the first few TLS failures silently (keep stale data on screen).
+// After this many consecutive failures, escalate to on-screen error.
+static constexpr int kMaxSilentFails = 3;
+static int s_claudeFails = 0;
+
+// ── Claude fetch ─────────────────────────────────────────────────────────────
+
+static String s_cachedOrgId;
+static String s_cachedOrgKey;
+
+static bool fetchClaudeOrg(const String& key, String& orgId, char errBuf[]) {
+    if (s_cachedOrgId.length() && s_cachedOrgKey == key) {
+        orgId = s_cachedOrgId;
+        return true;
+    }
+    String body; int code;
+    auto addH = [&](HTTPClient& h){
+        h.addHeader("Cookie",     "sessionKey=" + key);
+        h.addHeader("Accept",     "application/json");
+        h.addHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)");
+        h.addHeader("Referer",    "https://claude.ai");
+        h.addHeader("Origin",     "https://claude.ai");
+    };
+    if (!tlsGet("https://claude.ai/api/organizations", addH, body, code)) {
+        snprintf(errBuf, 24, "Auth %d", code);
+        return false;
+    }
+    JsonDocument doc;
+    if (deserializeJson(doc, body)) { snprintf(errBuf, 24, "JSON parse"); return false; }
+    body = String();
+    JsonArray arr = doc.as<JsonArray>();
+    if (arr.size() == 0) { snprintf(errBuf, 24, "No org"); return false; }
+    const char* uuid = arr[0]["uuid"].as<const char*>();
+    if (!uuid || !*uuid) { snprintf(errBuf, 24, "No uuid"); return false; }
+    orgId = uuid;
+    s_cachedOrgId = orgId;
+    s_cachedOrgKey = key;
+    return true;
+}
+
+bool Api::fetchClaude(const Settings& s, ClaudeData& out) {
+    if (s.claudeKey.isEmpty()) { snprintf(out.err, sizeof(out.err), "no key"); return false; }
+
+    String orgId;
+    char orgErr[24] = "";
+    bool wasCached = (s_cachedOrgId.length() && s_cachedOrgKey == s.claudeKey);
+    if (!fetchClaudeOrg(s.claudeKey, orgId, orgErr)) {
+        s_claudeFails++;
+        if (out.valid && s_claudeFails < kMaxSilentFails) {
+            Serial.printf("[claude] org fetch failed (%s), attempt %d/%d — keeping stale data\n", orgErr, s_claudeFails, kMaxSilentFails);
+            return false;
+        }
+        strncpy(out.err, orgErr, sizeof(out.err) - 1);
+        return false;
+    }
+    if (!wasCached) { yield(); delay(150); }
+
+    String body; int code;
+    String url = "https://claude.ai/api/organizations/" + orgId + "/usage";
+    auto addH = [&](HTTPClient& h){
+        h.addHeader("Cookie",     "sessionKey=" + s.claudeKey);
+        h.addHeader("Accept",     "application/json");
+        h.addHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)");
+        h.addHeader("Referer",    "https://claude.ai");
+        h.addHeader("Origin",     "https://claude.ai");
+    };
+    if (!tlsGet(url, addH, body, code)) {
+        if (code < 0) {
+            s_claudeFails++;
+            if (out.valid && s_claudeFails < kMaxSilentFails) {
+                Serial.printf("[claude] transient TLS failure (%d), attempt %d/%d — keeping stale data\n", code, s_claudeFails, kMaxSilentFails);
+                return false;
+            }
+        }
+        snprintf(out.err, sizeof(out.err), "HTTP %d", code);
+        return false;
+    }
+    out.err[0] = '\0';
+    s_claudeFails = 0;
+    JsonDocument doc;
+    if (deserializeJson(doc, body)) { snprintf(out.err, sizeof(out.err), "parse"); return false; }
+    body = String();
+
+    // utilization is CONSUMED %. Report consumed or remaining per user setting.
+    auto pctFromKey = [&](const char* k) -> float {
+        if (!doc[k].is<JsonObject>()) return -1.0f;
+        JsonVariant u = doc[k]["utilization"];
+        if (u.isNull()) return -1.0f;
+        float v = u.as<float>();
+        if (!s.usageShowConsumed) v = 100.0f - v;
+        if (v < 0) v = 0; if (v > 100) v = 100;
+        return v;
+    };
+    auto resetFromKey = [&](const char* k) -> time_t {
+        const char* s = doc[k]["resets_at"] | "";
+        return (s && *s) ? parseISO8601(s) : 0;
+    };
+
+    out.sessionPct   = pctFromKey("five_hour");
+    out.weeklyPct    = pctFromKey("seven_day");
+    out.sessionReset = resetFromKey("five_hour");
+    out.weeklyReset  = resetFromKey("seven_day");
+
+    out.rawKeys[0] = '\0';
+    int rawPos = 0;
+    for (auto& m : out.models) { m.pct = -1.0f; m.label[0] = '\0'; }
+    int slot = 0;
+    for (JsonPair kv : doc.as<JsonObject>()) {
+        const char* key = kv.key().c_str();
+        if (!kv.value().is<JsonObject>()) continue;
+        JsonVariant u = kv.value()["utilization"];
+        if (u.isNull()) continue;
+        int n = snprintf(out.rawKeys + rawPos, sizeof(out.rawKeys) - rawPos,
+                         "%s%s=%.0f", rawPos ? "," : "", key, u.as<float>());
+        if (n > 0 && rawPos + n < (int)sizeof(out.rawKeys)) rawPos += n;
+        String k(key);
+        if (!k.startsWith("seven_day_") && !k.startsWith("five_hour_")) continue;
+        if (slot >= 3) continue;
+        float used = u.as<float>();
+        if (!s.usageShowConsumed) used = 100.0f - used;
+        if (used < 0) used = 0; if (used > 100) used = 100;
+        String lbl = k;
+        if (lbl.startsWith("seven_day_"))  lbl = lbl.substring(10);
+        else if (lbl.startsWith("five_hour_")) lbl = lbl.substring(10);
+        lbl.toUpperCase();
+        if (lbl.length() > 10) lbl = lbl.substring(0, 10);
+        bool dup = false;
+        for (int i = 0; i < slot; i++) {
+            if (strcmp(out.models[i].label, lbl.c_str()) == 0) { dup = true; break; }
+        }
+        if (dup) continue;
+        out.models[slot].pct = used;
+        strncpy(out.models[slot].label, lbl.c_str(), sizeof(out.models[0].label) - 1);
+        out.models[slot].label[sizeof(out.models[0].label) - 1] = '\0';
+        slot++;
+    }
+
+    out.valid = true;
+    return true;
+}
