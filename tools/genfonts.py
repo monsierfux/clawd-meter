@@ -48,9 +48,7 @@ FONT_MATRIX = [
     ("VT323-44",        "VT323-Regular.ttf",      44, ASCII + EXTRA),
     ("VT323-64",        "VT323-Regular.ttf",      64, ASCII + EXTRA),
     ("VT323-86",        "VT323-Regular.ttf",      86, ASCII + EXTRA),
-    ("VT323-110",       "VT323-Regular.ttf",     110, ASCII + EXTRA),
     # Silkscreen — UI pixel font for status bars / pills / countdowns
-    ("Silkscreen-10",   "Silkscreen-Regular.ttf", 10, ASCII),
     ("Silkscreen-12",   "Silkscreen-Regular.ttf", 12, ASCII),
     ("Silkscreen-16",   "Silkscreen-Regular.ttf", 16, ASCII),
     # Pixelify Sans — softer pixel display font
@@ -64,6 +62,11 @@ FONT_MATRIX = [
     ("DMMono-12",       "DMMono-Regular.ttf",     12, ASCII + EXTRA),
     ("DMMono-14",       "DMMono-Regular.ttf",     14, ASCII + EXTRA),
     ("DMMono-16",       "DMMono-Regular.ttf",     16, ASCII + EXTRA),
+    # Jersey 25 — candidate big-numeric family (alternative to VT323).
+    ("Jersey25-32",     "Jersey25-Regular.ttf",   32, ASCII + EXTRA),
+    ("Jersey25-44",     "Jersey25-Regular.ttf",   44, ASCII + EXTRA),
+    ("Jersey25-64",     "Jersey25-Regular.ttf",   64, ASCII + EXTRA),
+    ("Jersey25-86",     "Jersey25-Regular.ttf",   86, ASCII + EXTRA),
 ]
 
 

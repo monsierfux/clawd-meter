@@ -30,11 +30,11 @@ bool chClaudeEnabled(const ChannelCtx& ctx) {
 
 static void paintSessReset(time_t resetEpoch) {
     String s = (resetEpoch > 0) ? Api::formatCountdown(resetEpoch) : String("--");
-    tft.fillRect(SCREEN_W - 110, 26, 100, 28, Theme::BG);
+    tft.fillRect(SCREEN_W - 185, 24, 185, 26, Theme::BG);   // wide clear for the broader Jersey glyphs
     Display::useFont("VT323-32");
     tft.setTextDatum(TR_DATUM);
     tft.setTextColor(Theme::CORAL, Theme::BG);
-    tft.drawString(s, SCREEN_W - 12, 26);
+    tft.drawString(s, SCREEN_W - 18, 26);                    // right margin so nothing clips
     strncpy(s_heroReset, s.c_str(), sizeof(s_heroReset) - 1);
 }
 
@@ -42,26 +42,27 @@ static void paintSessHero(float pct) {
     char pctBuf[8];
     if (pct < 0) snprintf(pctBuf, sizeof(pctBuf), "--");
     else         snprintf(pctBuf, sizeof(pctBuf), "%.0f", pct);
-    // Clear hero band + suffix area
-    tft.fillRect(10, 46, SCREEN_W - 20, 76, Theme::BG);
+    // Clear hero band + suffix area. Starts at y=52 (below the taller Jersey
+    // countdown above) so the countdown's bottom row isn't clipped.
+    tft.fillRect(10, 52, SCREEN_W - 20, 72, Theme::BG);
 
     uint16_t uc = Display::usageColor(pct);
     Display::useFont("VT323-86");
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(uc, Theme::BG);
-    tft.drawString(pctBuf, 12, 46);
+    tft.drawString(pctBuf, 12, 52);
     int heroW = tft.textWidth(pctBuf);
     int heroH = tft.fontHeight();
 
     Display::useFont("VT323-44");
     tft.setTextColor(uc, Theme::BG);
-    int pctY = 46 + (heroH - tft.fontHeight()) - 4;
+    int pctY = 52 + (heroH - tft.fontHeight()) - 4;
     tft.drawString("%", 12 + heroW + 2, pctY);
 
     Display::useFont("DMMono-11");
     tft.setTextDatum(TR_DATUM);
     tft.setTextColor(Theme::CORAL, Theme::BG);
-    tft.drawString("CLAUDE", SCREEN_W - 12, 76);
+    tft.drawString("CLAUDE", SCREEN_W - 12, 82);
 
     Display::pixelBar(12, 128, SCREEN_W - 24, 8,
                      pct < 0 ? 0 : pct, uc);

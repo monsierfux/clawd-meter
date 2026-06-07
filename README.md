@@ -160,5 +160,5 @@ not redistribute as a commercial product; do not access accounts that aren't you
 
 ## License
 
-MIT — see [LICENSE](./LICENSE). Bundled fonts (VT323, Silkscreen, DM Mono,
-Pixelify Sans) are under the SIL Open Font License.
+MIT — see [LICENSE](./LICENSE). Bundled fonts — **DM Mono** (UI/body) and
+**Jersey 25** (big numerals) — are under the SIL Open Font License.

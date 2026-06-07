@@ -40,6 +40,9 @@ void Display::useFont(const char* name) {
     if (strncmp(name, "Silkscreen", 10) == 0 || strncmp(name, "PixelifySans", 12) == 0) {
         const char* dash = strrchr(name, '-');
         if (dash && dash[1]) { snprintf(remap, sizeof(remap), "DMMono%s", dash); name = remap; }
+    } else if (strncmp(name, "VT323", 5) == 0) {           // big numerics → Jersey 25
+        const char* dash = strrchr(name, '-');
+        if (dash && dash[1]) { snprintf(remap, sizeof(remap), "Jersey25%s", dash); name = remap; }
     }
     if (s_loadedFont[0] && strcmp(s_loadedFont, name) == 0) return;
     if (s_loadedFont[0]) tft.unloadFont();
