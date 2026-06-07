@@ -19,6 +19,7 @@
 #include "config.h"
 #include "api.h"
 #include <string.h>
+#include <stdlib.h>
 
 // ── Geometry (320x240 landscape) ──
 // Square eyes (mochi style), wide gap between them.
@@ -47,15 +48,30 @@ bool chClawdEnabled(const ChannelCtx& ctx) {
 
 // ── helpers ──
 
+// Parse a "#RRGGBB" / "RRGGBB" hex string into RGB565. Returns false if not hex.
+static bool parseHex565(const String& s, uint16_t& out) {
+    String h = s;
+    if (h.startsWith("#")) h = h.substring(1);
+    if (h.length() != 6) return false;
+    char* end = nullptr;
+    long v = strtol(h.c_str(), &end, 16);
+    if (!end || *end != '\0') return false;
+    uint8_t r = (v >> 16) & 0xFF, g = (v >> 8) & 0xFF, b = v & 0xFF;
+    out = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+    return true;
+}
+
 static uint16_t eyeColor(const ChannelCtx& ctx) {
     const String& n = ctx.settings->clawdEyeColor;
+    uint16_t hx; if (parseHex565(n, hx)) return hx;
     if (n == "black") return Theme::BG;          // 0x0000 (use with a colored bg)
     uint16_t c = Theme::namedColor(n.c_str());
     return c ? c : Theme::SKY;
 }
 static uint16_t bgColor(const ChannelCtx& ctx) {
-    // "black" (and any unknown) → 0x0000.
-    return Theme::namedColor(ctx.settings->clawdBgColor.c_str());
+    const String& n = ctx.settings->clawdBgColor;
+    uint16_t hx; if (parseHex565(n, hx)) return hx;
+    return Theme::namedColor(n.c_str());         // "black"/unknown → 0x0000
 }
 
 // Resolve the expression to show + the Claude 5-hour "used" value (or -1).
