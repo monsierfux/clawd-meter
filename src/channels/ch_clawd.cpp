@@ -131,15 +131,17 @@ static void drawOpenEye(int cx, int lookX, int h, uint16_t col) {
 static void drawBlinkEye(int cx, uint16_t col) {
     tft.fillRect(cx - EYE_W/2, EYE_CY - 6, EYE_W, 12, col);
 }
-// Happy "^ ^": blocky caret, apex on top.
+// Happy "^ ^": blocky caret, apex on top. A filled dot at the apex cleans the joint.
 static void drawHappyEye(int cx, uint16_t col) {
     int half = EYE_W/2, v = EYE_H/3, t = 14;
     thickLine(cx - half, EYE_CY + v, cx,        EYE_CY - v, t, col);
     thickLine(cx,        EYE_CY - v, cx + half, EYE_CY + v, t, col);
+    tft.fillCircle(cx, EYE_CY - v, t/2, col);
 }
 // Squish "> <": blocky chevron — left eye ">", right eye "<".
 static void drawSquishEye(int cx, bool pointRight, uint16_t col) {
     int half = EYE_W/2, v = EYE_H/3, t = 14;
+    int ax = pointRight ? cx + half : cx - half;   // apex x
     if (pointRight) {   // ">"  apex on the right
         thickLine(cx - half, EYE_CY - v, cx + half, EYE_CY,     t, col);
         thickLine(cx + half, EYE_CY,     cx - half, EYE_CY + v, t, col);
@@ -147,6 +149,7 @@ static void drawSquishEye(int cx, bool pointRight, uint16_t col) {
         thickLine(cx + half, EYE_CY - v, cx - half, EYE_CY,     t, col);
         thickLine(cx - half, EYE_CY,     cx + half, EYE_CY + v, t, col);
     }
+    tft.fillCircle(ax, EYE_CY, t/2, col);          // clean the apex joint
 }
 static void drawSleepyEye(int cx, uint16_t col) {
     tft.fillRect(cx - EYE_W/2, EYE_CY - 4, EYE_W, 8, col);
@@ -214,7 +217,7 @@ static void paintFooter(const ChannelCtx& ctx, uint16_t bg) {
     tft.fillRect(0, 212, SCREEN_W, 20, bg);
     Display::useFont("DMMono-11");
     tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(Theme::MUTED, bg);
+    tft.setTextColor(eyeColor(ctx), bg);        // match the eyes / accent
     tft.drawString(s_footer, SCREEN_W/2, 220);
 }
 
@@ -290,7 +293,7 @@ void chClawdTick(const ChannelCtx& ctx) {
 
     // Normal / stressed: double-blink (closed→open→closed→open) + slow wiggle.
     uint32_t wiggleEvery = 2400 / speed;
-    uint32_t blinkEvery  = 7000 / speed;     // less frequent, calmer
+    uint32_t blinkEvery  = 10000 / speed;    // less frequent, calmer
     if (s_blinkPhase == 0) {
         if (now - s_lastBlink >= blinkEvery) {
             s_blinkPhase = 1; s_blinkT = now; paintEyes(expr, s_lookX, true,  eyeCol, bg);
