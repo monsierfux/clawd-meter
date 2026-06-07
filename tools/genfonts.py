@@ -60,6 +60,10 @@ FONT_MATRIX = [
     ("DMMono-9",        "DMMono-Regular.ttf",      9, ASCII + EXTRA),
     ("DMMono-10",       "DMMono-Regular.ttf",     10, ASCII + EXTRA),
     ("DMMono-11",       "DMMono-Regular.ttf",     11, ASCII + EXTRA),
+    # DM Mono also used for the UI/status tiers (12/14/16) in place of Silkscreen/Pixelify.
+    ("DMMono-12",       "DMMono-Regular.ttf",     12, ASCII + EXTRA),
+    ("DMMono-14",       "DMMono-Regular.ttf",     14, ASCII + EXTRA),
+    ("DMMono-16",       "DMMono-Regular.ttf",     16, ASCII + EXTRA),
 ]
 
 

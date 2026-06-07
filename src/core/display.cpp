@@ -22,7 +22,7 @@ TFT_eSPI tft = TFT_eSPI();
 // Channels switch fonts max 3 × per draw → ~150 ms per channel transition.
 // Acceptable since channels change every 8 s.
 
-static const char* s_loadedFont = nullptr;
+static char s_loadedFont[24] = "";
 
 static const char* nameFor(Display::FontTier t) {
     switch (t) {
@@ -34,19 +34,27 @@ static const char* nameFor(Display::FontTier t) {
 }
 
 void Display::useFont(const char* name) {
-    if (s_loadedFont && strcmp(s_loadedFont, name) == 0) return;
-    if (s_loadedFont) tft.unloadFont();
+    // Body / UI fonts use DM Mono (cleaner to read); big numerics stay VT323.
+    // Silkscreen-* and PixelifySans-* are routed to DMMono-<same size>.
+    char remap[24];
+    if (strncmp(name, "Silkscreen", 10) == 0 || strncmp(name, "PixelifySans", 12) == 0) {
+        const char* dash = strrchr(name, '-');
+        if (dash && dash[1]) { snprintf(remap, sizeof(remap), "DMMono%s", dash); name = remap; }
+    }
+    if (s_loadedFont[0] && strcmp(s_loadedFont, name) == 0) return;
+    if (s_loadedFont[0]) tft.unloadFont();
     // VLW files live at /fonts/<name>.vlw on LittleFS. TFT_eSPI prepends '/'
     // and appends '.vlw', so pass "fonts/<name>". Also must pass LittleFS
     // explicitly because TFT_eSPI defaults to SPIFFS.
     String path = String("fonts/") + name;
     tft.loadFont(path, LittleFS);
-    s_loadedFont = name;
+    strncpy(s_loadedFont, name, sizeof(s_loadedFont) - 1);
+    s_loadedFont[sizeof(s_loadedFont) - 1] = '\0';
 }
 
 // Drop the loaded VLW glyph cache to free heap before memory-hungry ops (TLS).
 void Display::releaseFont() {
-    if (s_loadedFont) { tft.unloadFont(); s_loadedFont = nullptr; }
+    if (s_loadedFont[0]) { tft.unloadFont(); s_loadedFont[0] = '\0'; }
 }
 
 // ── glimmer logo — 16×16 spark, direct-blit ──
