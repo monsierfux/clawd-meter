@@ -122,18 +122,19 @@ static void paintEyes(int expr, int lookX, bool blink, uint16_t eyeCol, uint16_t
             drawSquishEye(EYE_CX_R, false, eyeCol, bg);
             break;
         case EX_SLEEPY:
-            drawSleepyEye(EYE_CX_L, Theme::MUTED);
-            drawSleepyEye(EYE_CX_R, Theme::MUTED);
+            drawSleepyEye(EYE_CX_L, eyeCol);
+            drawSleepyEye(EYE_CX_R, eyeCol);
             break;
         case EX_STRESSED: {
-            uint16_t c = Theme::CORAL;
-            if (blink) { drawBlinkEye(EYE_CX_L, c); drawBlinkEye(EYE_CX_R, c); }
+            // Mood is conveyed by the worried brows + shape, not by recoloring —
+            // the user's chosen eye color is always respected.
+            if (blink) { drawBlinkEye(EYE_CX_L, eyeCol); drawBlinkEye(EYE_CX_R, eyeCol); }
             else {
-                drawOpenEye(EYE_CX_L, lookX, EYE_H, c);
-                drawOpenEye(EYE_CX_R, lookX, EYE_H, c);
+                drawOpenEye(EYE_CX_L, lookX, EYE_H, eyeCol);
+                drawOpenEye(EYE_CX_R, lookX, EYE_H, eyeCol);
             }
-            drawBrow(EYE_CX_L, true,  c, bg);
-            drawBrow(EYE_CX_R, false, c, bg);
+            drawBrow(EYE_CX_L, true,  eyeCol, bg);
+            drawBrow(EYE_CX_R, false, eyeCol, bg);
             break;
         }
         case EX_NORMAL:
