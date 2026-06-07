@@ -30,7 +30,8 @@ All channels use region-based partial repaints — no flicker between updates.
 - **MCU**: ESP32-WROOM-32, dual-core 240 MHz, 4 MB flash
 - **Display**: 320×240 ILI9341 (landscape), backlight active-high PWM on GPIO21
 - **Connectivity**: Wi-Fi 2.4 GHz; USB is data-wired (flash directly over USB)
-- microSD slot + resistive touch present but unused
+- **Touch**: XPT2046 resistive — tap the screen to advance to the next channel (toggle in the web UI)
+- microSD slot present but unused
 
 ## Quick start
 
@@ -55,7 +56,7 @@ Afterwards the web UI is at `http://<device-ip>/`.
 ## Web interface
 
 - **Tokens** — your Claude `sessionKey` cookie (claude.ai → DevTools → Cookies).
-- **Channels** — toggle which screens rotate (incl. the Clawd mascot).
+- **Channels** — toggle which screens rotate (incl. the Clawd mascot), auto-rotate, and tap-to-advance (touch).
 - **Clawd** — mode (auto/manual), manual expression, animation speed, eye &
   background color.
 - **You** — brightness, highlight color, consumed-vs-remaining usage, timezone,
@@ -65,11 +66,14 @@ Afterwards the web UI is at `http://<device-ip>/`.
 
 Driven by your Claude **5-hour** window:
 
+The eyes always use your chosen eye color; the *shape* conveys the mood:
+
 | 5-hour usage | Expression |
 |---|---|
-| plenty left (< 55% used) | happy / squish eyes |
-| mid (55–85% used) | normal eyes (blink + wiggle) |
-| near limit (≥ 85% used) | stressed (coral eyes + worried brows) |
+| lots left (< 40% used) | happy ( ^ ^ ) |
+| good (40–60% used) | squish ( > < ) |
+| mid (60–85% used) | normal eyes (double-blink + wiggle) |
+| near limit (≥ 85% used) | stressed (worried brows) |
 | no data yet | sleepy |
 
 ## Getting your Claude token

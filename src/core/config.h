@@ -12,6 +12,9 @@ static constexpr uint16_t SCREEN_H = 240;
 // Active-HIGH backlight: 255 = full bright, 0 = off (8-bit analogWrite).
 static constexpr uint16_t BL_FULL = 255;
 static constexpr uint16_t BL_OFF  = 0;
+// XPT2046 touch PENIRQ pin (active-low on touch). We only need tap detection,
+// so we read this pin directly — no SPI / coordinates needed.
+static constexpr int TOUCH_IRQ_PIN = 36;
 #else
 static constexpr uint16_t SCREEN_W = 240;
 static constexpr uint16_t SCREEN_H = 240;

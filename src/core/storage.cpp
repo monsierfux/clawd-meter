@@ -30,6 +30,7 @@ Settings Storage::load() {
     s.showForecast  = doc["show_forecast"]  | true;
     s.showInfo      = doc["show_info"]      | true;
     s.autoRotate    = doc["auto_rotate"]    | true;
+    s.touchAdvance  = doc["touch_advance"]  | true;
     s.claudeWeeklyHero = doc["claude_weekly_hero"] | false;
     s.clawdMode     = doc["clawd_mode"]     | "auto";
     s.clawdExpr     = doc["clawd_expr"]     | "normal";
@@ -70,6 +71,7 @@ bool Storage::save(const Settings& s) {
     doc["show_forecast"] = s.showForecast;
     doc["show_info"]     = s.showInfo;
     doc["auto_rotate"]   = s.autoRotate;
+    doc["touch_advance"] = s.touchAdvance;
     doc["claude_weekly_hero"] = s.claudeWeeklyHero;
     doc["clawd_mode"]   = s.clawdMode;
     doc["clawd_expr"]   = s.clawdExpr;
