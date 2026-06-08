@@ -91,7 +91,8 @@
           x-on:click="pushHex = true; pushForm.color = '#'; $nextTick(() => $refs.pushHexInput.focus())">HEX</button>
       </div>
       <input type="text" x-ref="pushHexInput" x-model="pushForm.color"
-             x-bind:disabled="!pushHex" placeholder="#" maxlength="9">
+             x-bind:disabled="!pushHex" placeholder="#" maxlength="9"
+             x-on:blur="pushForm.color = normHex(pushForm.color)">
       <label>Duration (seconds)</label>
       <input type="number" x-model.number="pushForm.duration_s" min="5" max="300">
       <button x-on:click="sendPush()" class="primary">Send</button>
@@ -236,7 +237,8 @@
     <article>
       <h2>Colors</h2>
       <label>Eye color</label>
-      <select x-model="settings.clawdEyeColor">
+      <select x-bind:value="colMode(settings.clawdEyeColor, hexPresetsEye)"
+              x-on:change="pickColor('clawdEyeColor', $event.target.value, hexPresetsEye)">
         <option value="orange">Orange</option>
         <option value="black">Black (use a colored background)</option>
         <option value="coral">Coral</option>
@@ -244,13 +246,15 @@
         <option value="mint">Mint</option>
         <option value="sky">Sky</option>
         <option value="lilac">Lilac</option>
-        <option value="#ffffff">Custom hex…</option>
+        <option value="custom">Custom hex…</option>
       </select>
       <input type="text" maxlength="9" placeholder="#ffffff"
-             x-show="!['orange','black','coral','amber','mint','sky','lilac'].includes(settings.clawdEyeColor)"
-             x-model="settings.clawdEyeColor">
+             x-show="!hexPresetsEye.includes(settings.clawdEyeColor)"
+             x-model="settings.clawdEyeColor"
+             x-on:blur="settings.clawdEyeColor = normHex(settings.clawdEyeColor)">
       <label>Background</label>
-      <select x-model="settings.clawdBgColor">
+      <select x-bind:value="colMode(settings.clawdBgColor, hexPresetsBg)"
+              x-on:change="pickColor('clawdBgColor', $event.target.value, hexPresetsBg)">
         <option value="black">Black</option>
         <option value="orange">Orange</option>
         <option value="coral">Coral</option>
@@ -258,11 +262,12 @@
         <option value="mint">Mint</option>
         <option value="sky">Sky</option>
         <option value="lilac">Lilac</option>
-        <option value="#ffffff">Custom hex…</option>
+        <option value="custom">Custom hex…</option>
       </select>
       <input type="text" maxlength="9" placeholder="#ffffff"
-             x-show="!['black','orange','coral','amber','mint','sky','lilac'].includes(settings.clawdBgColor)"
-             x-model="settings.clawdBgColor">
+             x-show="!hexPresetsBg.includes(settings.clawdBgColor)"
+             x-model="settings.clawdBgColor"
+             x-on:blur="settings.clawdBgColor = normHex(settings.clawdBgColor)">
       <div class="hint">Choose a preset, or "Custom hex…" to type a <code>#RRGGBB</code> value. Changes apply when the Clawd channel is next shown (within one rotation), or immediately after Save &amp; Restart.</div>
     </article>
     </div>
@@ -294,7 +299,8 @@
         <option value="100">100%</option>
       </select>
       <label>Highlight color (usage numbers + bars)</label>
-      <select x-model="settings.highlightColor">
+      <select x-bind:value="colMode(settings.highlightColor, hexPresetsHighlight)"
+              x-on:change="pickColor('highlightColor', $event.target.value, hexPresetsHighlight)">
         <option value="auto">Auto (green / amber / red by usage)</option>
         <option value="orange">Orange</option>
         <option value="coral">Coral</option>
@@ -302,11 +308,12 @@
         <option value="mint">Mint</option>
         <option value="sky">Sky</option>
         <option value="lilac">Lilac</option>
-        <option value="#ffffff">Custom hex…</option>
+        <option value="custom">Custom hex…</option>
       </select>
       <input type="text" maxlength="9" placeholder="#ffffff"
-             x-show="!['auto','orange','coral','amber','mint','sky','lilac'].includes(settings.highlightColor)"
-             x-model="settings.highlightColor">
+             x-show="!hexPresetsHighlight.includes(settings.highlightColor)"
+             x-model="settings.highlightColor"
+             x-on:blur="settings.highlightColor = normHex(settings.highlightColor)">
       <div class="hint">Fixed accent for all usage numbers and bars (preset or "Custom hex…" for a <code>#RRGGBB</code> value), or Auto for usage-based coloring. Takes effect immediately on Save.</div>
       <label class="row"><input type="checkbox" x-model="settings.usageShowConsumed">Show consumed % (instead of remaining)</label>
       <div class="hint">Off: numbers show how much quota is left. On: how much has been used (e.g. 20% used shows 20%).</div>
@@ -413,6 +420,10 @@ function app() {
     settings: {},
     pushForm: { title: '', value: '', subtitle: '', color: 'mint', duration_s: 30 },
     pushHex: false,   // true → custom #hex input is active (else preset swatch)
+    // preset lists per colour dropdown (anything not in the list = a custom #hex)
+    hexPresetsHighlight: ['auto','orange','coral','amber','mint','sky','lilac'],
+    hexPresetsEye:       ['orange','black','coral','amber','mint','sky','lilac'],
+    hexPresetsBg:        ['black','orange','coral','amber','mint','sky','lilac'],
     toast: { msg: '', error: false, _t: null },
     saving: false,
     refreshing: false,
@@ -424,6 +435,21 @@ function app() {
       await this.loadSettings();
       // Periodic state refresh
       setInterval(() => this.refreshState(), 5000);
+    },
+
+    // ── Colour dropdown helpers (keep the select on "Custom hex…" while a
+    //    custom value is typed, instead of falling back to the first option) ──
+    colMode(val, presets) { return presets.includes(val) ? val : 'custom'; },
+    pickColor(key, sel, presets) {
+      if (sel === 'custom') {
+        if (presets.includes(this.settings[key]) || !this.settings[key]) this.settings[key] = '#';
+      } else {
+        this.settings[key] = sel;
+      }
+    },
+    // Auto-prepend "#" when a bare 6-char hex value is entered.
+    normHex(v) {
+      return (typeof v === 'string' && /^[0-9a-fA-F]{6}$/.test(v)) ? '#' + v : v;
     },
 
     // Live Clawd eye preview — mirrors the firmware's shapes/animation.
