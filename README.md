@@ -139,6 +139,12 @@ pio run -e cyd -t uploadfs  # flash filesystem over USB
 first with `curl http://<device-ip>/api/export` and restore via the setup AP
 (`POST /api/import`).
 
+## Support
+
+If clawd-meter made you smile, you can buy me a coffee — it's hugely appreciated ☕
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/monsieurfux)
+
 ## Credits
 
 Built on two MIT-licensed projects — thank you to both:
