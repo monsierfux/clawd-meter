@@ -128,6 +128,8 @@ static void drawIndicator(uint32_t now) {
     if (g_apMode || g_activeCount <= 1) return;
     const char* name = kChannels[g_activeIdx[g_activePtr]].name;
     if (!strcmp(name, "Push")) return;
+    // Clawd "eyes only" mode: hide the rotation/progress bar too.
+    if (!strcmp(name, "Clawd") && !g_settings.clawdShowStats) return;
 
     uint32_t slideMs = (uint32_t)g_settings.channelSec * 1000UL;
     uint32_t elapsed = now - g_lastSlide;

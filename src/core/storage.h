@@ -30,15 +30,16 @@ struct Settings {
     uint8_t  clawdSpeed    = 2;         // 1 slow · 2 normal · 3 fast
     String   clawdEyeColor = "black";   // palette name; "black" → 0x0000 (pair with colored bg)
     String   clawdBgColor  = "orange";  // palette name; "black" → 0x0000
+    bool     clawdShowStats = true;     // show usage footer + progress bar on Clawd (off → eyes only)
     // Display polarity for this panel — ST7789 (SmallTV-Ultra) needs true,
     // ILI9341 (CYD/ESP32) needs false. Web UI exposes a runtime toggle.
     bool     invertDisplay = true;   // ST7789 (Ultra) and this CYD ILI9341 both need INVON
     // Global highlight/accent color for usage numbers + bars.
     // "auto" = usage-based (green/amber/red); or "coral"/"amber"/"mint"/"sky"/"lilac".
     String   highlightColor = "auto";
-    // Usage metric polarity: false = show REMAINING % (default, original behavior),
-    // true = show CONSUMED %. Affects Claude + Home usage numbers, bars and colors.
-    bool     usageShowConsumed = false;
+    // Usage metric polarity: true = show CONSUMED % (default — actual usage),
+    // false = show REMAINING %. Affects Claude + Home usage numbers, bars and colors.
+    bool     usageShowConsumed = true;
     bool     nightDim      = false;
     uint8_t  nightStart    = 22;
     uint8_t  nightEnd      = 7;

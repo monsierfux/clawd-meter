@@ -34,41 +34,49 @@ static const char* greetingFor(int hour, const char* name) {
     return s_greetBuf;
 }
 
-static void clockGeom(int& hhX, int& colonX, int& mmX, int& digitW, int& colonW) {
+// Jersey has PROPORTIONAL digits, so a monospace grid makes the colon look
+// off-centre (e.g. "13" is narrow → colon drifts toward the minutes). Fix: the
+// colon sits at a FIXED centre, the hours are RIGHT-aligned to it and the minutes
+// LEFT-aligned after it, using the widest pair ("88") to size the slots so the
+// layout stays centred and stable across minute changes.
+static void clockGeom(int& colonX, int& mmX, int& pairW, int& colonW) {
     Display::useFont(CLOCK_FN);
-    digitW = tft.textWidth("0");          // monospace digit
+    pairW  = tft.textWidth("88");
     colonW = tft.textWidth(":");
-    int total = digitW * 4 + colonW;
-    hhX = (SCREEN_W - total) / 2;
-    colonX = hhX + digitW * 2;
-    mmX = colonX + colonW;
+    int total  = pairW + colonW + pairW;
+    int startX = (SCREEN_W - total) / 2;
+    colonX = startX + pairW;          // colon advance box left edge
+    mmX    = colonX + colonW;         // minutes left edge
 }
 
 static void paintHH(int h) {
     char buf[4]; snprintf(buf, sizeof(buf), "%02d", h);
-    int hhX, colonX, mmX, dw, cw;
-    clockGeom(hhX, colonX, mmX, dw, cw);
-    tft.fillRect(hhX, CLOCK_Y, dw * 2, CLOCK_H, Theme::BG);
+    int colonX, mmX, pairW, cw;
+    clockGeom(colonX, mmX, pairW, cw);
+    tft.fillRect(colonX - pairW - 6, CLOCK_Y - 4, pairW + 6, CLOCK_H + 12, Theme::BG);
     Display::useFont(CLOCK_FN);
-    tft.setTextDatum(TL_DATUM);
+    tft.setTextDatum(TR_DATUM);                 // right-align hours to the colon
     tft.setTextColor(Theme::INK, Theme::BG);
-    tft.drawString(buf, hhX, CLOCK_Y);
+    tft.drawString(buf, colonX, CLOCK_Y);
 }
 
 static void paintMM(int m) {
     char buf[4]; snprintf(buf, sizeof(buf), "%02d", m);
-    int hhX, colonX, mmX, dw, cw;
-    clockGeom(hhX, colonX, mmX, dw, cw);
-    tft.fillRect(mmX, CLOCK_Y, dw * 2, CLOCK_H, Theme::BG);
+    int colonX, mmX, pairW, cw;
+    clockGeom(colonX, mmX, pairW, cw);
+    // clear colon + both minute digits as one block, then redraw both
+    tft.fillRect(colonX, CLOCK_Y - 4, (mmX + pairW + 8) - colonX, CLOCK_H + 12, Theme::BG);
     Display::useFont(CLOCK_FN);
     tft.setTextDatum(TL_DATUM);
+    tft.setTextColor(Theme::CORAL, Theme::BG);
+    tft.drawString(":", colonX, CLOCK_Y);
     tft.setTextColor(Theme::INK, Theme::BG);
     tft.drawString(buf, mmX, CLOCK_Y);
 }
 
 static void paintColon() {
-    int hhX, colonX, mmX, dw, cw;
-    clockGeom(hhX, colonX, mmX, dw, cw);
+    int colonX, mmX, pairW, cw;
+    clockGeom(colonX, mmX, pairW, cw);
     Display::useFont(CLOCK_FN);
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(Theme::CORAL, Theme::BG);

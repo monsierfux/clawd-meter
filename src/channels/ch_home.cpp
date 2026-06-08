@@ -34,59 +34,48 @@ static int     s_hh = -1, s_mm = -1, s_dayHour = -1;
 static float   s_cl = -2.f, s_cx = -2.f;
 static float   s_tempC = -999.f;
 static uint8_t s_code = 255;
-// Clock x-geometry cached on first paint
-static bool    s_geomReady = false;
-static int     s_hhX = 8, s_colonX = 0, s_mmX = 0, s_digitW = 0;
+// Clock x-geometry — recomputed from the ACTUAL hours width each hour, because
+// the Jersey font has proportional digits (e.g. "1" is much narrower than "0").
+static int     s_colonX = 0, s_mmX = 0;
 
 bool chHomeEnabled(const ChannelCtx& ctx) {
     return ctx.settings && ctx.settings->showHome
         && time(nullptr) > 1000000000L;
 }
 
-static void clockGeom() {
-    if (s_geomReady) return;
+static const int HH_X      = 8;     // hours left edge (fixed → clock stays left-anchored)
+static const int CLK_GAP   = 6;     // gap between hours|colon and colon|minutes
+static const int CLK_RIGHT = 214;   // clear right boundary (stops before weather column)
+
+// Recompute colon/minute x from the ACTUAL hours width so the colon always sits
+// snug to the hours regardless of digit widths.
+static void homeClockGeom(int hh) {
     Display::useFont("VT323-86");
-    s_digitW = tft.textWidth("0");
+    char b[4]; snprintf(b, sizeof(b), "%02d", hh);
+    int hhW    = tft.textWidth(b);
     int colonW = tft.textWidth(":");
-    s_hhX = 8;
-    s_colonX = s_hhX + s_digitW * 2;
-    s_mmX = s_colonX + colonW;
-    s_geomReady = true;
+    s_colonX = HH_X + hhW + CLK_GAP;
+    s_mmX    = s_colonX + colonW + CLK_GAP;
 }
 
 // ── Per-region paint helpers ──
 
 static void paintHH(int hh) {
-    clockGeom();
+    homeClockGeom(hh);
     char b[4]; snprintf(b, sizeof(b), "%02d", hh);
-    // Clear with a small margin (left + vertical) so anti-aliased glyph edges
-    // never leave stale pixels; stop exactly at the colon on the right.
-    int x0 = s_hhX - 4; if (x0 < 0) x0 = 0;
-    tft.fillRect(x0, 4, s_colonX - x0, 88, Theme::BG);
+    tft.fillRect(0, 0, s_colonX, 92, Theme::BG);   // clear hours area up to the colon
     Display::useFont("VT323-86");
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(Theme::INK, Theme::BG);
-    tft.drawString(b, s_hhX, 6);
+    tft.drawString(b, HH_X, 6);
 }
 
-static void paintColon() {
-    clockGeom();
-    Display::useFont("VT323-86");
-    tft.setTextDatum(TL_DATUM);
-    tft.setTextColor(Theme::CORAL, Theme::BG);
-    tft.drawString(":", s_colonX, 6);
-}
-
-static void paintMM(int mm) {
-    clockGeom();
+// Colon + minutes as one block. Clears to a FIXED right edge so that an hourly
+// change of the hours width never leaves stale colon/minute pixels behind.
+// Uses the geometry stored by the last paintHH (hours width only changes hourly).
+static void paintColonMM(int mm) {
     char b[4]; snprintf(b, sizeof(b), "%02d", mm);
-    // Repaint the colon + both minute digits as ONE block: clear generously from
-    // the colon to well past the minutes, then redraw both. This guarantees no
-    // stale glyph-edge pixels survive a minute change. Hours (left of the colon)
-    // are untouched.
-    int x0 = s_colonX;
-    int w  = (s_mmX + s_digitW * 2 + 12) - x0;
-    tft.fillRect(x0, 2, w, 90, Theme::BG);
+    tft.fillRect(s_colonX, 0, CLK_RIGHT - s_colonX, 92, Theme::BG);
     Display::useFont("VT323-86");
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(Theme::CORAL, Theme::BG);
@@ -216,8 +205,7 @@ void chHomeDraw(const ChannelCtx& ctx) {
 
     // Hero clock
     paintHH(tmv.tm_hour);
-    paintColon();
-    paintMM(tmv.tm_min);
+    paintColonMM(tmv.tm_min);
 
     // Weather column
     WeatherData* w = weatherSnapshotPtr();
@@ -276,9 +264,10 @@ void chHomeTick(const ChannelCtx& ctx) {
     if (now < 1000000000L) return;
     struct tm tmv; localtime_r(&now, &tmv);
 
-    // Clock
-    if (tmv.tm_min != s_mm) { paintMM(tmv.tm_min); s_mm = tmv.tm_min; }
-    if (tmv.tm_hour != s_hh) { paintHH(tmv.tm_hour); s_hh = tmv.tm_hour; }
+    // Clock — recompute geometry (paintHH) when the hour changes, then minutes.
+    bool hourChanged = (tmv.tm_hour != s_hh);
+    if (hourChanged) { paintHH(tmv.tm_hour); s_hh = tmv.tm_hour; }
+    if (hourChanged || tmv.tm_min != s_mm) { paintColonMM(tmv.tm_min); s_mm = tmv.tm_min; }
     if (tmv.tm_hour != s_dayHour) {
         paintHourStrip(tmv.tm_hour);
         s_dayHour = tmv.tm_hour;

@@ -94,8 +94,8 @@ Within a minute the Claude screens fill in and Clawd starts reacting. 🎉
 Open **glimmer.local** and explore the tabs:
 
 - **Channels** — turn screens on/off, auto-rotate, and **tap-to-advance** (touch the screen to skip to the next one).
-- **Clawd** — auto/manual mode, expression, animation speed, **eye & background colour** (presets or a custom `#hex`). There's a **live preview**.
-- **You** — brightness, highlight colour, show *used* vs *remaining* %, timezone, night-dimming, your name.
+- **Clawd** — auto/manual mode, expression, animation speed, **eye & background colour** (presets or a custom `#hex`), and a **"show usage stats"** toggle (off → just the eyes, no footer/bar). There's a **live preview**.
+- **You** — brightness, highlight colour, **used vs remaining %** (defaults to *used* — the actual consumption), timezone, night-dimming, your name.
 
 ### Clawd's moods (auto mode)
 

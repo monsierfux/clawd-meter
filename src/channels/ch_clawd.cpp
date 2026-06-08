@@ -26,7 +26,7 @@
 // Square eyes (mochi style), wide gap between them.
 static const int EYE_CX_L = 80;
 static const int EYE_CX_R = 240;
-static const int EYE_CY   = 104;    // sit a little above center (mochi look)
+static const int EYE_CY   = 94;     // sit above center (mochi look); ~10% higher than before
 static const int EYE_W    = 78;
 static const int EYE_H    = 84;
 static const int LOOK_MAX = 14;     // max horizontal pupil wiggle
@@ -216,6 +216,12 @@ static void buildFooter(const ChannelCtx& ctx, char* out, size_t n) {
 }
 
 static void paintFooter(const ChannelCtx& ctx, uint16_t bg) {
+    // "Eyes only" mode: clear the footer band and skip the usage text.
+    if (!ctx.settings->clawdShowStats) {
+        tft.fillRect(0, 212, SCREEN_W, 20, bg);
+        s_footer[0] = '\0';
+        return;
+    }
     buildFooter(ctx, s_footer, sizeof(s_footer));
     tft.fillRect(0, 212, SCREEN_W, 20, bg);
     Display::useFont("DMMono-11");
@@ -269,9 +275,11 @@ void chClawdTick(const ChannelCtx& ctx) {
         return;
     }
 
-    // Footer follows the live usage value.
-    char fresh[40]; buildFooter(ctx, fresh, sizeof(fresh));
-    if (strcmp(fresh, s_footer) != 0) paintFooter(ctx, bg);
+    // Footer follows the live usage value (skipped entirely in eyes-only mode).
+    if (ctx.settings->clawdShowStats) {
+        char fresh[40]; buildFooter(ctx, fresh, sizeof(fresh));
+        if (strcmp(fresh, s_footer) != 0) paintFooter(ctx, bg);
+    }
 
     if (!isAnimated(expr)) return;
 

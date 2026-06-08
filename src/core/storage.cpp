@@ -37,6 +37,7 @@ Settings Storage::load() {
     s.clawdSpeed    = doc["clawd_speed"]    | 2;
     s.clawdEyeColor = doc["clawd_eye"]      | "black";
     s.clawdBgColor  = doc["clawd_bg"]       | "orange";
+    s.clawdShowStats = doc["clawd_stats"]   | true;
     s.invertDisplay = doc["invert_display"] | true;
     s.highlightColor = doc["highlight_color"] | "auto";
     s.usageShowConsumed = doc["usage_consumed"] | false;
@@ -78,6 +79,7 @@ bool Storage::save(const Settings& s) {
     doc["clawd_speed"]  = s.clawdSpeed;
     doc["clawd_eye"]    = s.clawdEyeColor;
     doc["clawd_bg"]     = s.clawdBgColor;
+    doc["clawd_stats"]  = s.clawdShowStats;
     doc["invert_display"]= s.invertDisplay;
     doc["highlight_color"] = s.highlightColor;
     doc["usage_consumed"] = s.usageShowConsumed;

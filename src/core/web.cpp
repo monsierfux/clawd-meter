@@ -150,6 +150,7 @@ static void handleApiGetSettings() {
     d["clawdSpeed"]    = s.clawdSpeed;
     d["clawdEyeColor"] = s.clawdEyeColor;
     d["clawdBgColor"]  = s.clawdBgColor;
+    d["clawdShowStats"] = s.clawdShowStats;
     d["invertDisplay"] = s.invertDisplay;
     d["highlightColor"] = s.highlightColor;
     d["usageShowConsumed"] = s.usageShowConsumed;
@@ -239,6 +240,7 @@ static void applyIfPresent(Settings& s, JsonDocument& d) {
     applyBool("autoRotate",   s.autoRotate);
     applyBool("touchAdvance", s.touchAdvance);
     applyBool("claudeWeeklyHero", s.claudeWeeklyHero);
+    applyBool("clawdShowStats", s.clawdShowStats);
     applyBool("invertDisplay",s.invertDisplay);
     applyBool("usageShowConsumed", s.usageShowConsumed);
     applyBool("nightDim",    s.nightDim);
