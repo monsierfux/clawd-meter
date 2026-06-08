@@ -39,7 +39,7 @@ You don't need to be a programmer. The whole thing takes ~15 minutes.
 | A computer with **Chrome or Edge** | For the one-click web flasher. |
 | (optional) **3D-printed stand/case** | See the model on Makerworld 👇 |
 
-> **3D model:** the printable case is on Makerworld → **[link]** *(add your Makerworld URL here)*.
+> **3D model:** the printable case is on Makerworld → **<https://makerworld.com/de/models/2906020-clawd-meter>**.
 
 ## 2. Flash the firmware (no software to install)
 
