@@ -4,7 +4,12 @@
 > gives it a face: **Clawd**, an animated mascot whose mood follows how much of
 > your quota is left. Runs on a cheap (~10 €) ESP32 colour display.
 
-<!-- Tip: add a photo/GIF of your build here -->
+![Clawd — the pixel mascot, happy when there's plenty of quota left](images/clawd-meter.jpg)
+
+> Clawd's eyes follow your Claude usage, and you configure everything from a
+> little web page on the device:
+
+![clawd-meter — web settings next to the printed case](images/clawd-meter-app.jpg)
 
 clawd-meter is a Claude-only remix of [glimmer](https://github.com/Avinava/glimmer)
 (usage dashboard + channel engine) combined with the mascot idea from
