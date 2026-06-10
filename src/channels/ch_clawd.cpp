@@ -31,7 +31,7 @@ static const int EYE_W    = 78;
 static const int EYE_H    = 84;
 static const int LOOK_MAX = 14;     // max horizontal pupil wiggle
 
-enum Expr { EX_NORMAL, EX_HAPPY, EX_SQUISH, EX_STRESSED, EX_SLEEPY, EX_CODE, EX_LOGO };
+enum Expr { EX_NORMAL, EX_HAPPY, EX_SQUISH, EX_STRESSED, EX_SLEEPY, EX_EXCITED, EX_DIZZY, EX_CODE, EX_LOGO };
 
 // ── tick cache ──
 static int      s_expr       = -1;
@@ -87,20 +87,25 @@ static Expr resolveExpr(const ChannelCtx& ctx, float& usedOut) {
     usedOut = -1.f;
     if (ctx.settings->clawdMode == "manual") {
         const String& e = ctx.settings->clawdExpr;
-        if (e == "happy")  return EX_HAPPY;
-        if (e == "squish") return EX_SQUISH;
-        if (e == "code")   return EX_CODE;
-        if (e == "logo")   return EX_LOGO;
+        if (e == "excited") return EX_EXCITED;
+        if (e == "happy")   return EX_HAPPY;
+        if (e == "squish")  return EX_SQUISH;
+        if (e == "dizzy")   return EX_DIZZY;
+        if (e == "code")    return EX_CODE;
+        if (e == "logo")    return EX_LOGO;
         return EX_NORMAL;
     }
+    // AUTO: expression follows how much of the 5-hour window is USED.
     float p = ctx.claude ? ctx.claude->sessionPct : -1.f;
     if (p < 0) return EX_SLEEPY;
     float used = ctx.settings->usageShowConsumed ? p : (100.f - p);
     usedOut = used;
-    if (used >= 85.f) return EX_STRESSED;   // near limit
-    if (used <  40.f) return EX_HAPPY;      // lots left  → ^ ^
-    if (used <  60.f) return EX_SQUISH;     // good       → > <
-    return EX_NORMAL;
+    if (used >= 95.f) return EX_DIZZY;     // basically maxed out → ✕ ✕
+    if (used >= 80.f) return EX_STRESSED;  // near the limit      → worried brows
+    if (used >= 60.f) return EX_NORMAL;    // getting busy        → normal (blinks/looks)
+    if (used >= 40.f) return EX_SQUISH;    // good                → > <
+    if (used >= 20.f) return EX_HAPPY;     // lots left           → ^ ^
+    return EX_EXCITED;                      // tons left (<20%)    → ✦ ✦
 }
 
 static bool isAnimated(int e) { return e == EX_NORMAL || e == EX_STRESSED || e == EX_SQUISH; }
@@ -154,6 +159,22 @@ static void drawSquishEye(int cx, bool pointRight, uint16_t col) {
 static void drawSleepyEye(int cx, uint16_t col) {
     tft.fillRect(cx - EYE_W/2, EYE_CY - 4, EYE_W, 8, col);
 }
+// Excited "✦": sparkle / star — bold plus + shorter diagonals.
+static void drawStarEye(int cx, uint16_t col) {
+    int a = EYE_H/2 - 8, d = (int)(a * 0.6f), t = 13, td = 8;
+    thickLine(cx,     EYE_CY - a, cx,     EYE_CY + a, t,  col);   // |
+    thickLine(cx - a, EYE_CY,     cx + a, EYE_CY,     t,  col);   // —
+    thickLine(cx - d, EYE_CY - d, cx + d, EYE_CY + d, td, col);   // \
+    thickLine(cx - d, EYE_CY + d, cx + d, EYE_CY - d, td, col);   // /
+    tft.fillCircle(cx, EYE_CY, t/2 + 1, col);
+}
+// Dizzy "✕": crossed X — quota basically gone.
+static void drawXEye(int cx, uint16_t col) {
+    int h = EYE_W/2 - 4, v = EYE_H/2 - 8, t = 13;
+    thickLine(cx - h, EYE_CY - v, cx + h, EYE_CY + v, t, col);    // \
+    thickLine(cx + h, EYE_CY - v, cx - h, EYE_CY + v, t, col);    // /
+    tft.fillCircle(cx, EYE_CY, t/2, col);
+}
 // Worried brows, sitting well above the eyes (inner ends raised).
 static void drawBrow(int cx, bool leftBrow, uint16_t col) {
     int half = EYE_W/2;
@@ -181,6 +202,14 @@ static void paintEyes(int expr, int lookX, bool blink, uint16_t eyeCol, uint16_t
         case EX_SLEEPY:
             drawSleepyEye(EYE_CX_L, eyeCol);
             drawSleepyEye(EYE_CX_R, eyeCol);
+            break;
+        case EX_EXCITED:
+            drawStarEye(EYE_CX_L, eyeCol);
+            drawStarEye(EYE_CX_R, eyeCol);
+            break;
+        case EX_DIZZY:
+            drawXEye(EYE_CX_L, eyeCol);
+            drawXEye(EYE_CX_R, eyeCol);
             break;
         case EX_STRESSED: {
             // Mood is conveyed by the worried brows + shape, not by recoloring —

@@ -108,10 +108,12 @@ The eyes keep your chosen colour; the **shape** shows the mood:
 
 | Your Claude 5-hour usage | Clawd |
 |---|---|
-| lots left (< 40% used) | happy ( ^ ^ ) |
-| good (40–60%) | squish ( > < ) |
-| getting busy (60–85%) | normal (blinks + looks around) |
-| near the limit (≥ 85%) | stressed (worried brows) |
+| under 20% used (tons left) | excited ( ✦ ✦ ) |
+| 20–40% used | happy ( ^ ^ ) |
+| 40–60% used | squish ( > < ) |
+| 60–80% used | normal (blinks + looks around) |
+| 80–95% used | stressed (worried brows) |
+| 95% or more used (maxed out) | dizzy ( ✕ ✕ ) |
 | no data yet | sleepy |
 
 ---
