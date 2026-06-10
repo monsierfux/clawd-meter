@@ -176,10 +176,12 @@ static void drawStarEye(int cx, uint16_t col, bool big) {
     }
 }
 // Dizzy "✕": crossed X — quota basically gone.
+// Both strokes drawn left→right (normalized direction) — the right→left variant
+// rendered unreliably on the panel.
 static void drawXEye(int cx, uint16_t col) {
     int h = EYE_W/2 - 4, v = EYE_H/2 - 8, t = 13;
-    thickLine(cx - h, EYE_CY - v, cx + h, EYE_CY + v, t, col);    // \
-    thickLine(cx + h, EYE_CY - v, cx - h, EYE_CY + v, t, col);    // /
+    thickLine(cx - h, EYE_CY - v, cx + h, EYE_CY + v, t, col);    // "\"  (top-left → bottom-right)
+    thickLine(cx - h, EYE_CY + v, cx + h, EYE_CY - v, t, col);    // "/"  (bottom-left → top-right)
     tft.fillCircle(cx, EYE_CY, t/2, col);
 }
 // Worried brows, sitting well above the eyes (inner ends raised).
