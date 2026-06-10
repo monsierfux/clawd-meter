@@ -108,7 +108,7 @@ static Expr resolveExpr(const ChannelCtx& ctx, float& usedOut) {
     return EX_EXCITED;                      // tons left (<20%)    → ✦ ✦
 }
 
-static bool isAnimated(int e) { return e == EX_NORMAL || e == EX_STRESSED || e == EX_SQUISH; }
+static bool isAnimated(int e) { return e == EX_NORMAL || e == EX_STRESSED || e == EX_SQUISH || e == EX_EXCITED; }
 
 // Clear the rectangular band that holds both eyes (generous for wiggle).
 static void clearEyeBand(uint16_t bg) {
@@ -159,13 +159,17 @@ static void drawSquishEye(int cx, bool pointRight, uint16_t col) {
 static void drawSleepyEye(int cx, uint16_t col) {
     tft.fillRect(cx - EYE_W/2, EYE_CY - 4, EYE_W, 8, col);
 }
-// Excited "✦": sparkle / star — bold plus + shorter diagonals.
-static void drawStarEye(int cx, uint16_t col) {
-    int a = EYE_H/2 - 8, d = (int)(a * 0.6f), t = 13, td = 8;
-    thickLine(cx,     EYE_CY - a, cx,     EYE_CY + a, t,  col);   // |
-    thickLine(cx - a, EYE_CY,     cx + a, EYE_CY,     t,  col);   // —
-    thickLine(cx - d, EYE_CY - d, cx + d, EYE_CY + d, td, col);   // \
-    thickLine(cx - d, EYE_CY + d, cx + d, EYE_CY - d, td, col);   // /
+// Excited "✦": sparkle / star — twinkles by pulsing between a big 8-point star
+// (bright phase) and a smaller 4-point plus (dim phase).
+static void drawStarEye(int cx, uint16_t col, bool big) {
+    int a = big ? (EYE_H/2 - 8) : (EYE_H/2 - 18), t = 13;
+    thickLine(cx,     EYE_CY - a, cx, EYE_CY + a, t, col);   // |
+    thickLine(cx - a, EYE_CY,     cx + a, EYE_CY, t, col);   // —
+    if (big) {                                              // diagonals only on the bright phase
+        int d = (int)(a * 0.6f);
+        thickLine(cx - d, EYE_CY - d, cx + d, EYE_CY + d, 8, col);   // \
+        thickLine(cx - d, EYE_CY + d, cx + d, EYE_CY - d, 8, col);   // /
+    }
     tft.fillCircle(cx, EYE_CY, t/2 + 1, col);
 }
 // Dizzy "✕": crossed X — quota basically gone.
@@ -203,10 +207,12 @@ static void paintEyes(int expr, int lookX, bool blink, uint16_t eyeCol, uint16_t
             drawSleepyEye(EYE_CX_L, eyeCol);
             drawSleepyEye(EYE_CX_R, eyeCol);
             break;
-        case EX_EXCITED:
-            drawStarEye(EYE_CX_L, eyeCol);
-            drawStarEye(EYE_CX_R, eyeCol);
+        case EX_EXCITED: {
+            bool big = !blink;   // bright (big 8-point) vs dim (small 4-point) twinkle phase
+            drawStarEye(EYE_CX_L, eyeCol, big);
+            drawStarEye(EYE_CX_R, eyeCol, big);
             break;
+        }
         case EX_DIZZY:
             drawXEye(EYE_CX_L, eyeCol);
             drawXEye(EYE_CX_R, eyeCol);
@@ -321,6 +327,17 @@ void chClawdTick(const ChannelCtx& ctx) {
             s_squishClosed = true;  s_squishT = now; paintEyes(expr, 0, true,  eyeCol, bg);
         } else if (s_squishClosed && now - s_squishT >= 180) {
             s_squishClosed = false; s_squishT = now; paintEyes(expr, 0, false, eyeCol, bg);
+        }
+        return;
+    }
+
+    // Excited: twinkle — long bright phase (big sparkle), short dim phase (small).
+    // Reuses s_squishClosed/s_squishT as the toggle (only one expr active at a time).
+    if (expr == EX_EXCITED) {
+        if (!s_squishClosed && now - s_squishT >= (uint32_t)(1100 / speed)) {
+            s_squishClosed = true;  s_squishT = now; paintEyes(expr, 0, true,  eyeCol, bg);  // dim
+        } else if (s_squishClosed && now - s_squishT >= (uint32_t)(450 / speed)) {
+            s_squishClosed = false; s_squishT = now; paintEyes(expr, 0, false, eyeCol, bg);  // bright
         }
         return;
     }
