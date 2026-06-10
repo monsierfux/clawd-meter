@@ -475,7 +475,7 @@ function app() {
         const eye = css(self.settings.clawdEyeColor, '#000000');
         const bg  = css(self.settings.clawdBgColor, '#d97757');
         let expr = self.settings.clawdExpr || 'normal';
-        if (self.settings.clawdMode !== 'manual') expr = ['excited','happy','squish','normal','stressed','dizzy'][Math.floor(t/1800)%6];
+        if (self.settings.clawdMode !== 'manual') expr = ['excited','happy','normal','stressed','squish','dizzy'][Math.floor(t/1800)%6];
         ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
         ctx.fillStyle = eye; ctx.strokeStyle = eye; ctx.lineCap='butt'; ctx.lineJoin='miter';
         const c = t % 7000, blink = (c>6400&&c<6600)||(c>6700&&c<6900);

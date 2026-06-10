@@ -101,10 +101,10 @@ static Expr resolveExpr(const ChannelCtx& ctx, float& usedOut) {
     float used = ctx.settings->usageShowConsumed ? p : (100.f - p);
     usedOut = used;
     if (used >= 95.f) return EX_DIZZY;     // basically maxed out → ✕ ✕
-    if (used >= 80.f) return EX_STRESSED;  // near the limit      → worried brows
-    if (used >= 60.f) return EX_NORMAL;    // getting busy        → normal (blinks/looks)
-    if (used >= 40.f) return EX_SQUISH;    // good                → > <
-    if (used >= 20.f) return EX_HAPPY;     // lots left           → ^ ^
+    if (used >= 80.f) return EX_SQUISH;    // 80-95%              → > <
+    if (used >= 60.f) return EX_STRESSED;  // 60-80%             → open eyes + worried brows
+    if (used >= 40.f) return EX_NORMAL;    // 40-60%             → normal (blinks/looks)
+    if (used >= 20.f) return EX_HAPPY;     // 20-40%             → ^ ^
     return EX_EXCITED;                      // tons left (<20%)    → ✦ ✦
 }
 

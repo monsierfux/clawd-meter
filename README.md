@@ -110,9 +110,9 @@ The eyes keep your chosen colour; the **shape** shows the mood:
 |---|---|
 | under 20% used (tons left) | excited ( ✦ ✦ ) |
 | 20–40% used | happy ( ^ ^ ) |
-| 40–60% used | squish ( > < ) |
-| 60–80% used | normal (blinks + looks around) |
-| 80–95% used | stressed (worried brows) |
+| 40–60% used | normal (blinks + looks around) |
+| 60–80% used | stressed (worried brows) |
+| 80–95% used | squish ( > < ) |
 | 95% or more used (maxed out) | dizzy ( ✕ ✕ ) |
 | no data yet | sleepy |
 
