@@ -159,18 +159,21 @@ static void drawSquishEye(int cx, bool pointRight, uint16_t col) {
 static void drawSleepyEye(int cx, uint16_t col) {
     tft.fillRect(cx - EYE_W/2, EYE_CY - 4, EYE_W, 8, col);
 }
-// Excited "✦": sparkle / star — twinkles by pulsing between a big 8-point star
-// (bright phase) and a smaller 4-point plus (dim phase).
+// Excited "✦": a real 4-point sparkle star (diamond with concave sides), drawn
+// as a filled 8-vertex polygon (outer tips + inner valleys), fanned from centre.
+// Twinkles by pulsing its size between bright (big) and dim phases.
 static void drawStarEye(int cx, uint16_t col, bool big) {
-    int a = big ? (EYE_H/2 - 8) : (EYE_H/2 - 18), t = 13;
-    thickLine(cx,     EYE_CY - a, cx, EYE_CY + a, t, col);   // |
-    thickLine(cx - a, EYE_CY,     cx + a, EYE_CY, t, col);   // —
-    if (big) {                                              // diagonals only on the bright phase
-        int d = (int)(a * 0.6f);
-        thickLine(cx - d, EYE_CY - d, cx + d, EYE_CY + d, 8, col);   // \
-        thickLine(cx - d, EYE_CY + d, cx + d, EYE_CY - d, 8, col);   // /
+    float R = big ? (EYE_H/2 - 6) : (EYE_H/2 - 16);   // outer tip radius (pulses)
+    float r = R * 0.32f;                              // inner valley radius (point sharpness)
+    float px = cx, py = EYE_CY - R;                   // start at top tip
+    for (int k = 1; k <= 8; k++) {
+        float ang = (-90 + k * 45) * 0.0174533f;
+        float rad = (k % 2 == 0) ? R : r;            // even k = outer tip, odd k = inner valley
+        float x = cx + rad * cosf(ang);
+        float y = EYE_CY + rad * sinf(ang);
+        tft.fillTriangle(cx, EYE_CY, lroundf(px), lroundf(py), lroundf(x), lroundf(y), col);
+        px = x; py = y;
     }
-    tft.fillCircle(cx, EYE_CY, t/2 + 1, col);
 }
 // Dizzy "✕": crossed X — quota basically gone.
 static void drawXEye(int cx, uint16_t col) {

@@ -469,7 +469,7 @@ function app() {
       const open = (cx,ox) => ctx.fillRect(cx-ew/2+ox, cy-eh/2, ew, eh);
       const shut = (cx) => ctx.fillRect(cx-ew/2, cy-6*S, ew, 12*S);
       const sleepy = (cx) => ctx.fillRect(cx-ew/2, cy-4*S, ew, 8*S);
-      const star = (cx,big) => { const a=(big?eh/2-8*S:eh/2-18*S), d=a*0.6; seg(cx,cy-a,cx,cy+a,13*S); seg(cx-a,cy,cx+a,cy,13*S); if(big){seg(cx-d,cy-d,cx+d,cy+d,8*S); seg(cx-d,cy+d,cx+d,cy-d,8*S);} dot(cx,cy); };
+      const star = (cx,big) => { const R=(big?eh/2-6*S:eh/2-16*S), r=R*0.32; ctx.beginPath(); for(let k=0;k<8;k++){const ang=(-90+k*45)*Math.PI/180, rad=(k%2===0)?R:r; const x=cx+rad*Math.cos(ang), y=cy+rad*Math.sin(ang); k?ctx.lineTo(x,y):ctx.moveTo(x,y);} ctx.closePath(); ctx.fill(); };
       const xeye = (cx) => { const h=ew/2-4*S, vv=eh/2-8*S; seg(cx-h,cy-vv,cx+h,cy+vv,13*S); seg(cx+h,cy-vv,cx-h,cy+vv,13*S); dot(cx,cy); };
       const loop = (t) => {
         const eye = css(self.settings.clawdEyeColor, '#000000');
