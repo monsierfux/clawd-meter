@@ -336,12 +336,15 @@ void chClawdTick(const ChannelCtx& ctx) {
         return;
     }
 
-    // Excited: calm twinkle — big sparkle for ~2s, then a brief small pulse.
+    // Excited: calm twinkle — big sparkle, then a brief small pulse. Follows the
+    // animation-speed setting: slow 3s · normal 2s · fast 1s between pulses.
     // Reuses s_squishClosed/s_squishT as the toggle (only one expr active at a time).
     if (expr == EX_EXCITED) {
-        if (!s_squishClosed && now - s_squishT >= 2000) {
+        uint32_t bigMs = (uint32_t)(4 - speed) * 1000;
+        uint32_t dimMs = (uint32_t)(4 - speed) * 175;
+        if (!s_squishClosed && now - s_squishT >= bigMs) {
             s_squishClosed = true;  s_squishT = now; paintEyes(expr, 0, true,  eyeCol, bg);  // dim
-        } else if (s_squishClosed && now - s_squishT >= 350) {
+        } else if (s_squishClosed && now - s_squishT >= dimMs) {
             s_squishClosed = false; s_squishT = now; paintEyes(expr, 0, false, eyeCol, bg);  // bright
         }
         return;
