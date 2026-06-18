@@ -21,6 +21,7 @@ static char   s_heroReset[12] = "";
 static char   s_secSub[24]    = "";
 static float  s_modelPct[3]       = {-2.f, -2.f, -2.f};
 static char   s_modelLabel[3][12] = {"", "", ""};
+static bool   s_showingErr        = false;   // was the last paint the error screen?
 
 bool chClaudeEnabled(const ChannelCtx& ctx) {
     return ctx.settings && ctx.settings->showClaude && !ctx.settings->claudeKey.isEmpty();
@@ -144,8 +145,10 @@ void chClaudeDraw(const ChannelCtx& ctx) {
         tft.drawString("Refresh token in web UI", SCREEN_W/2, 124);
         s_heroPct = -2.f; s_secPct = -2.f;
         s_heroReset[0] = 0; s_secSub[0] = 0;
+        s_showingErr = true;
         return;
     }
+    s_showingErr = false;
 
     const bool swapped = ctx.settings->claudeWeeklyHero;
     const float heroPct  = swapped ? d.weeklyPct   : d.sessionPct;
@@ -174,7 +177,13 @@ void chClaudeDraw(const ChannelCtx& ctx) {
 void chClaudeTick(const ChannelCtx& ctx) {
     if (!ctx.claude) return;
     const ClaudeData& d = *ctx.claude;
-    if (d.err[0]) return;
+    // Error<->data is a whole different layout; tick's region repaints can't
+    // switch between them. If the state flipped since the last paint (e.g. the
+    // token got refreshed and data came back), do a full redraw so the stale
+    // error message is cleared without needing a reboot/rotation.
+    bool err = d.err[0] != '\0';
+    if (err != s_showingErr) { chClaudeDraw(ctx); return; }
+    if (err) return;
 
     const bool swapped = ctx.settings->claudeWeeklyHero;
     const float heroPct  = swapped ? d.weeklyPct   : d.sessionPct;

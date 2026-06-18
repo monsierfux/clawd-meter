@@ -280,6 +280,9 @@ static void handleApiPostSettings() {
     tzset();
 
     bool restart = d["_restart"] | false;
+    // Re-fetch immediately so a new/updated token (or any change) takes effect
+    // now, instead of waiting for the next scheduled poll.
+    if (!restart) mainTriggerRefresh();
     server.send(200, "application/json", restart ? "{\"ok\":true,\"restart\":true}" : "{\"ok\":true}");
     if (restart) { delay(300); ESP.restart(); }
 }
