@@ -21,7 +21,31 @@ static char   s_heroReset[12] = "";
 static char   s_secSub[24]    = "";
 static float  s_modelPct[3]       = {-2.f, -2.f, -2.f};
 static char   s_modelLabel[3][12] = {"", "", ""};
-static bool   s_showingErr        = false;   // was the last paint the error screen?
+static bool   s_showingErr        = false;   // was the last paint the FULL error screen?
+static bool   s_wasStale          = false;   // showing data, but last fetch failed (offline hint)
+
+// We have something worth showing if a previous fetch succeeded.
+static inline bool haveUsableData(const ClaudeData& d) {
+    return d.valid && (d.sessionPct >= 0 || d.weeklyPct >= 0);
+}
+// Full error screen only when there's NO data at all (e.g. bad key from the
+// start). If we have stale-but-valid data we keep showing it (like Clawd) and
+// just flag staleness — a dropped connection shouldn't blank the dashboard.
+static inline bool isErrorScreen(const ClaudeData& d) {
+    return d.err[0] && !haveUsableData(d);
+}
+
+// Small muted footer: "offline — last values" while stale, cleared when fresh.
+static void paintStaleFooter(bool stale) {
+    tft.fillRect(0, 224, SCREEN_W, 16, Theme::BG);
+    if (stale) {
+        Display::useFont("DMMono-11");
+        tft.setTextDatum(MC_DATUM);
+        tft.setTextColor(Theme::MUTED, Theme::BG);
+        tft.drawString("offline \xC2\xB7 showing last values", SCREEN_W/2, 230);
+    }
+    s_wasStale = stale;
+}
 
 bool chClaudeEnabled(const ChannelCtx& ctx) {
     return ctx.settings && ctx.settings->showClaude && !ctx.settings->claudeKey.isEmpty();
@@ -135,7 +159,7 @@ void chClaudeDraw(const ChannelCtx& ctx) {
     }
     Display::statusBar("Claude", modelTag, Theme::CORAL);
 
-    if (d.err[0]) {
+    if (isErrorScreen(d)) {            // no data at all → show the error prominently
         Display::useFont("Silkscreen-16");
         tft.setTextDatum(MC_DATUM);
         tft.setTextColor(Theme::CORAL, Theme::BG);
@@ -172,18 +196,19 @@ void chClaudeDraw(const ChannelCtx& ctx) {
 
     s_heroPct = (heroPct < 0) ? -2.f : heroPct;
     s_secPct  = (secPct  < 0) ? -2.f : secPct;
+    paintStaleFooter(d.err[0] != '\0');   // hint if we're showing stale values
 }
 
 void chClaudeTick(const ChannelCtx& ctx) {
     if (!ctx.claude) return;
     const ClaudeData& d = *ctx.claude;
-    // Error<->data is a whole different layout; tick's region repaints can't
-    // switch between them. If the state flipped since the last paint (e.g. the
-    // token got refreshed and data came back), do a full redraw so the stale
-    // error message is cleared without needing a reboot/rotation.
-    bool err = d.err[0] != '\0';
-    if (err != s_showingErr) { chClaudeDraw(ctx); return; }
-    if (err) return;
+    // Full-error-screen <-> data is a whole different layout; tick's region
+    // repaints can't switch between them. If that flips, do a full redraw.
+    bool es = isErrorScreen(d);
+    if (es != s_showingErr) { chClaudeDraw(ctx); return; }
+    if (es) return;
+    // Data mode: keep the "offline" footer in sync when staleness toggles.
+    if ((d.err[0] != '\0') != s_wasStale) paintStaleFooter(d.err[0] != '\0');
 
     const bool swapped = ctx.settings->claudeWeeklyHero;
     const float heroPct  = swapped ? d.weeklyPct   : d.sessionPct;

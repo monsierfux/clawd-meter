@@ -114,6 +114,12 @@ static bool tlsGet(const String& url, const std::function<void(HTTPClient&)>& ad
 // After this many consecutive failures, escalate to on-screen error.
 static constexpr int kMaxSilentFails = 3;
 static int s_claudeFails = 0;
+static int s_connFails   = 0;   // consecutive connection-level (code<0) failures
+int Api::claudeConnFails() { return s_connFails; }
+// Record a fetch attempt's outcome for the connection-failure streak: a
+// connection-level error (negative code) grows it; reaching the server at all
+// (success or any HTTP status) clears it.
+static inline void noteConn(int code) { if (code < 0) s_connFails++; else s_connFails = 0; }
 
 // ── Claude fetch ─────────────────────────────────────────────────────────────
 
@@ -134,9 +140,11 @@ static bool fetchClaudeOrg(const String& key, String& orgId, char errBuf[]) {
         h.addHeader("Origin",     "https://claude.ai");
     };
     if (!tlsGet("https://claude.ai/api/organizations", addH, body, code)) {
+        noteConn(code);
         snprintf(errBuf, 24, "Auth %d", code);
         return false;
     }
+    noteConn(code);   // reached the server (200) → clear the connection-fail streak
     JsonDocument doc;
     if (deserializeJson(doc, body)) { snprintf(errBuf, 24, "JSON parse"); return false; }
     body = String();
@@ -177,6 +185,7 @@ bool Api::fetchClaude(const Settings& s, ClaudeData& out) {
         h.addHeader("Origin",     "https://claude.ai");
     };
     if (!tlsGet(url, addH, body, code)) {
+        noteConn(code);
         if (code < 0) {
             s_claudeFails++;
             if (out.valid && s_claudeFails < kMaxSilentFails) {
@@ -187,6 +196,7 @@ bool Api::fetchClaude(const Settings& s, ClaudeData& out) {
         snprintf(out.err, sizeof(out.err), "HTTP %d", code);
         return false;
     }
+    noteConn(code);   // reached the server → clear the streak
     out.err[0] = '\0';
     s_claudeFails = 0;
     JsonDocument doc;

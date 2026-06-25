@@ -118,6 +118,13 @@ static void handleApiState() {
     d["cpu_mhz"]             = ESP.getCpuFreqMHz();
     d["claude_configured"]   = pSettings && !pSettings->claudeKey.isEmpty();
     d["weather_configured"]  = pSettings && (pSettings->weatherLat != 0.0f || pSettings->weatherLon != 0.0f);
+    const ClaudeData* cd = mainClaudeData();
+    if (cd) {
+        d["claude_err"]      = cd->err;          // "" when healthy
+        d["claude_valid"]    = cd->valid;
+        d["claude_5h"]       = cd->sessionPct;   // -1 until first good fetch
+    }
+    d["claude_conn_fails"]   = Api::claudeConnFails();
     String out; serializeJson(d, out);
     server.send(200, "application/json", out);
 }

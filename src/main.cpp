@@ -314,6 +314,19 @@ void loop() {
         tft.fillCircle(SCREEN_W - 6, 6, 3, Theme::CORAL);
         refreshAll();
         g_lastSlide = now;
+
+        // Self-heal: after long uptime the heap fragments / the network stack
+        // can get stuck so the claude.ai TLS handshake stops connecting (HTTP -1).
+        // Only a reboot recovers it. Reboot after a run of CONNECTION-level
+        // failures — auth/HTTP-status errors reset the streak, so an expired
+        // token never causes a reboot loop (it just shows the error to fix).
+        if (WiFi.status() == WL_CONNECTED && !g_settings.claudeKey.isEmpty()
+            && Api::claudeConnFails() >= 5) {
+            Serial.printf("[claude] %d consecutive connection failures — rebooting to recover\n",
+                          Api::claudeConnFails());
+            delay(200);
+            ESP.restart();
+        }
     }
 
     // If a push card is freshly active, snap to it immediately.

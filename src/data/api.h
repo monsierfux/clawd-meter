@@ -23,6 +23,12 @@ namespace Api {
     // Authenticates and pulls the org's usage. Updates the ClaudeData passed in.
     bool fetchClaude(const Settings& s, ClaudeData& out);
 
+    // Count of consecutive CONNECTION-level Claude failures (TLS/TCP couldn't
+    // connect, code < 0). Auth/HTTP-status errors reset it to 0, so this only
+    // grows when the network stack itself can't reach claude.ai (heap-frag /
+    // stuck stack after long uptime). Used by main loop to self-heal via reboot.
+    int claudeConnFails();
+
     // Helpers for displaying countdowns.
     String formatCountdown(time_t t);
 }
